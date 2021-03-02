@@ -101,12 +101,10 @@ floatLP cpu(0.5, refresh_rate);
 floatLP ram(0.5, refresh_rate);
 floatLP temp(0.5, refresh_rate);
 
-// pwm_map contains data for PWM() thread to work on
-// Item with key = 0 contains full LED driver register data frame
-// Other keys represent delay [in microseconds] from frame 0, while
-// their values contain data to be xor'ed into the previous frame.
-// This approach allows exploiting the std::map self-sorting nature
-// to obtain multi-channel PWM action.
+// pwm_data contains data for PWM() thread to work on
+// Each vector item contains 16 bits to be passed to LED driver.
+// Vector items are ordered from the least to most significant bits
+// in terms of PWM modulation.
 typedef std::vector<std::bitset<16>> pwm_data_datatype;
 std::atomic<pwm_data_datatype *> pwm_data;
 
