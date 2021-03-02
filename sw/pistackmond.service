@@ -1,0 +1,10 @@
+[Unit]
+Description=PiStackMon Daemon
+
+[Service]
+User=root
+
+ExecStart=/usr/local/sbin/pistackmond
+
+[Install]
+WantedBy=multi-user.target

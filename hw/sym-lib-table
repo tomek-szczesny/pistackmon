@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name PiStackMon-rescue)(type Legacy)(uri ${KIPRJMOD}/PiStackMon-rescue.lib)(options "")(descr ""))
+)

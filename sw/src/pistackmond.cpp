@@ -1,0 +1,521 @@
+#include <atomic>
+#include <bitset>
+#include <chrono>
+#include <cmath>
+#include <fstream>
+#include <signal.h>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <sys/mman.h>	// mmap()
+#include <fcntl.h>	// open()
+#include <unistd.h>	// close()
+#include <pthread.h>	// pthread_setschedparam()
+
+#ifndef PLATFORM
+#define PLATFORM	RASPBERRY_PI3 // The default if not chosen
+#endif
+
+
+using namespace std::chrono_literals;
+
+//=========================== floatLP CLASS ====================================
+// A float with low pass filter built in
+
+class floatLP {
+	// Acts like a float variable, but internally
+	// filters its contents every time it is updated.
+	// Must be updated at the same rate to be effective.
+
+	private:
+	float z = 0;			// The variable
+	float alpha = 1;		// Smoothing factor
+
+	public:
+
+	// z - initial value
+	// tau - time constant [s]
+	// freq - sampling frequency
+	floatLP(float tau, float freq, float z = 0) {
+		this->z = z;
+		this->alpha = 1 - (std::exp(-1/(freq * tau)));
+	}
+
+	floatLP operator=(float z0) {
+		z = (alpha * z0) + ((1 - alpha) * z);
+		return *this;
+	}
+
+	float f() { return z; }
+
+};
+
+//=================================== CONSTS ===================================
+
+// Data refreshing rate
+const float refresh_rate = 10;				// Hz
+const std::chrono::microseconds refresh_period =
+	std::chrono::microseconds(static_cast<uint32_t>(1000000/refresh_rate));
+
+// Refresh divider - the actual data sampling is performed only once in ref_div,
+// although data smoothing is performed on every refresh cycle.
+const int ref_div = 5;
+
+// LSB period of a PWM driver.
+// Generally should be kept under 20ms/(2^pwm_res) for PWM operation above 50Hz
+// for the LED intensity to appear smooth.
+// Smaller values are possible at the expense of CPU load and accuracy.
+// Values under 10us are not recommended due to thread sleep accuracy.
+// For mathematical consistency it should be an integer, but you do you.
+const float pwm_lsb_period = 16;			// [us]
+
+// bit depth of PWM LED driver (2-16)
+const int pwm_res = 10;
+
+// Layout vectors, containing positions of each LED in LED driver register
+const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
+const std::vector<int> ram_layout = {9, 8, 7, 6, 5};
+const std::vector<int> temp_layout = {11, 10, 12, 13, 14};
+
+// Led intensities adjusted by color (green LEDs tend to appear much brighter,
+// so their PWM values are decreased to compensate)
+const float led_g = 0.3;
+const float led_y = 1;
+const float led_r = 1;
+const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
+						led_r, led_y, led_y, led_g, led_g,
+						led_g, led_g, led_g, led_y, led_r};
+
+// Gamma correction for LEDs
+// It is not the proper way to linearize the LED response, but close enough
+const float led_gamma = 2.8;
+
+//================================== GLOBALS ===================================
+
+// Variables holding measurement results
+// Numeric arguments are time constants of low pass filters [in seconds]
+// Bigger values will further smooth (and slow down) the response.
+floatLP cpu(0.5, refresh_rate);
+floatLP ram(0.5, refresh_rate);
+floatLP temp(0.5, refresh_rate);
+
+// pwm_map contains data for PWM() thread to work on
+// Item with key = 0 contains full LED driver register data frame
+// Other keys represent delay [in microseconds] from frame 0, while
+// their values contain data to be xor'ed into the previous frame.
+// This approach allows exploiting the std::map self-sorting nature
+// to obtain multi-channel PWM action.
+typedef std::vector<std::bitset<16>> pwm_data_datatype;
+std::atomic<pwm_data_datatype *> pwm_data;
+
+// Map of a part of memory that provides access to GPIO registers
+volatile uint32_t * gpiomap;
+
+// Precalculated PWM periods
+// To be filled by PWM thread
+std::vector<std::chrono::microseconds> pwm_periods;
+
+// Bools signaling the respective threads to stop
+bool pwm_closing = 0;
+bool main_closing = 0;
+
+//=================================== MISC =====================================
+
+std::vector<int> getIntsFromLine(std::string s) {
+	// Returns all integers found in a given string
+
+	std::string temp_s;
+	int temp_i;
+	std::stringstream ss;
+	std::vector<int> output;
+
+	ss << s;
+
+	// Reading values from ss one by one, and discarding those that
+	// cannot be converted to int.
+	while (!ss.eof()) {
+		ss >> temp_s;
+		if (std::stringstream(temp_s) >> temp_i) {
+			output.push_back(temp_i);
+		}
+	}
+	return output;
+}
+
+//================================ DATA SOURCES ================================
+
+float fetchTemp() {
+	// Returns CPU temperature in degrees C
+
+	const std::string temp_file_name = 
+#if PLATFORM==RASPBERRY_PI3
+			"/sys/devices/virtual/thermal/thermal_zone0/temp";
+#endif
+
+	std::ifstream temp_file(temp_file_name);
+
+	if(!temp_file.is_open()) {
+		std::printf("Unable to open %s. Quitting!\n",
+						temp_file_name.c_str());
+		exit(-1);
+	}
+
+	float result;
+	temp_file >> result;
+	temp_file.close();
+	result /= 1000;
+	return result;	
+}
+
+//------------------------------------------------------------------------------
+
+float fetchCpu() {
+	// Returns CPU load in %.
+	// It's a mean value for all cores,
+	// and a mean value since the last call of this method.
+	// 
+	// /proc/stat contains counters of CPU time dedicated to various tasks.
+	// Fourth column is the CPU idle time.
+	// This function computes how much time CPUs were *not* idle.
+	//
+	// Too frequent calling (< 50ms) yields results with poor resolution,
+	// due to kernel counters working typically at 100Hz.
+	// It is recommended to apply some sort of low-pass filter
+	// for more meaningful long-term results.
+
+	static std::vector<int> last_stat;
+	std::vector<int> current_stat;
+	int temp_i = 0;
+	std::string temp_s;
+
+repeat:
+
+	std::ifstream cpu_file("/proc/stat");
+	if(!cpu_file.is_open()) {
+		std::printf("Unable to open /proc/stat. Quitting!\n");
+		exit(-1);
+	}
+
+	getline(cpu_file, temp_s);
+	cpu_file.close();
+	current_stat = getIntsFromLine(temp_s);
+
+	// On first run, the last_stat vector is empty,
+	// so it needs to be populated by repeating the whole thing.
+	if (last_stat.empty()) {
+		last_stat = current_stat;
+		std::this_thread::sleep_for(50ms);	
+		goto repeat;
+	}
+
+	float result = 0;
+	for (auto item : current_stat) temp_i+= item;
+	for (auto item : last_stat) temp_i-= item;
+	
+	// This might happen if called too soon after last call
+	// The result would be division by zero - nan.
+	if (temp_i == 0) {
+		std::this_thread::sleep_for(50ms);	
+		goto repeat;
+	}
+	
+	// The fourth column represents CPU idle time
+	result = current_stat.at(3) - last_stat.at(3);
+	result /= temp_i;
+	result = 1 - result;
+	result *= 100;
+
+	last_stat = current_stat;
+	return result;	
+}
+
+//------------------------------------------------------------------------------
+
+float fetchRam() {
+	// Returns percentage of used RAM.
+	// Used memory estimated just like "free" does:
+	// MemTotal - MemFree - Buffers - Cached - SReclaimable
+	// See "man free" for details.
+	
+	int memtotal = 1;
+
+	std::string temp_s;
+	float result = 0;
+
+
+	std::ifstream mem_file("/proc/meminfo");
+	if(!mem_file.is_open()) {
+		std::printf("Unable to open /proc/meminfo. Quitting!\n");
+		exit(-1);
+	}
+
+	while (!mem_file.eof()) {
+		getline(mem_file, temp_s);
+		//TODO: Replace with "starts_with" when it gets around)
+		if 	(temp_s.find("MemTotal:") == 0)
+			memtotal = getIntsFromLine(temp_s).at(0);
+		else if	(temp_s.find("MemFree:") == 0)
+			result -= getIntsFromLine(temp_s).at(0);
+		else if	(temp_s.find("Buffers:") == 0)
+			result -= getIntsFromLine(temp_s).at(0);
+		else if	(temp_s.find("Cached:") == 0)
+			result -= getIntsFromLine(temp_s).at(0);
+		else if	(temp_s.find("SReclaimable:") == 0)
+			result -= getIntsFromLine(temp_s).at(0);
+	}
+	mem_file.close();
+
+	result /= memtotal;
+	result += 1;
+	result *= 100;
+	return result;
+}
+
+// ================================ LED DRIVING ================================
+
+std::vector<float> led_pwms() {
+	// converts fetched numbers into float PWM values of each LED
+	// Includes LED PWM multipliers (for intensity correcton or whatever)
+	// Also includes gamma correction
+	
+	std::vector<float> output(16);
+
+	for (int i=0; i<5; i++) {
+		if (cpu.f() >= 20*(i+1)) output[cpu_layout[i]] = 1;
+		else {
+			output[cpu_layout[i]] = std::pow((cpu.f() - (20*i))/20, led_gamma);
+			break;
+		}
+	}
+
+	for (int i=0; i<5; i++) {
+		if (ram.f() >= 20*(i+1)) output[ram_layout[i]] = 1;
+		else {
+			output[ram_layout[i]] = std::pow((ram.f() - (20*i))/20, led_gamma);
+			break;
+		}
+	}
+	if (temp.f() > 40) {
+		for (int i=0; i<5; i++) {
+			if (temp.f() >= 10*(i+1)+40) output[temp_layout[i]] = 1;
+			else {
+				output[temp_layout[i]] = std::pow((temp.f() - (10*i+40))/10, led_gamma);
+				break;
+			}
+		}
+	}
+
+	for (int i=0; i<16; i++) output[i] *= led_pwm_multipliers[i];
+
+	return output;
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+pwm_data_datatype format_pwms(std::vector<float> pwms) {
+	// Converts float pwms of each LED into a vector of bitsets.
+	
+	std::vector<std::bitset<pwm_res>> pwms_digitized;
+	pwm_data_datatype output;
+	std::bitset<16> temp_data;
+
+	for (auto f : pwms) {
+		pwms_digitized.push_back(static_cast<uint16_t>(f*(std::pow(2,pwm_res)-1)));
+	}
+	for (int i=0; i < pwm_res; i++) {
+		temp_data.reset();
+		for (int j = 0; j < 16; j++) {
+			temp_data[j] = pwms_digitized[j][i];
+		}
+		output.push_back(temp_data);
+	}
+	return output;
+
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+void sendFrame16(std::bitset<16> f) {
+	// Sends data to LED driver chip but does not latch it
+
+	for(int i = 0; i < 16; i++) {
+		__sync_synchronize();
+		*(gpiomap+10) = (1 << 27);	// Set pin 27 (clk) low
+		__sync_synchronize();
+		*(gpiomap+10) = (1 << 27);	// Set pin 27 (clk) low
+		//__sync_synchronize();
+		*(gpiomap+(f[15-i]?7:10)) = (1 << 17);	// Set pin 17 (data) to value f[15-i])
+		__sync_synchronize();
+		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
+		__sync_synchronize();
+		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
+	}
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+inline void commitFrame() {
+	// Applies latch pulse to LED driver chip
+	// Thus applying whatever has been previously sent to it
+	// Keeping these separated helps synchronise PWM more precisely
+
+	__sync_synchronize();
+	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
+	__sync_synchronize();
+	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
+	__sync_synchronize();
+	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
+	__sync_synchronize();
+	*(gpiomap+10) = (1 << 22);	// Set pin 22 (latch) low
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+void gpioInit() {
+	
+#if PLATFORM==RASPBERRY_PI3
+
+	int gpiomem = open("/dev/mem", O_RDWR|O_SYNC);
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0x3F200000);
+	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
+	close(gpiomem);
+
+	// Set pins as inputs (reset 3-bit pin mode to 000)
+	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
+	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
+	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
+
+	// Set pins as outputs (sets 3-bit pin mode to 001)
+	*(gpiomap+1) |=  (1<<(7*3));	// Pin 17
+	*(gpiomap+2) |=  (1<<(2*3));	// Pin 22
+	*(gpiomap+2) |=  (1<<(7*3));	// Pin 27
+
+#endif
+	
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+void gpioDeinit() {
+
+	sendFrame16(0);		// Turn all them LEDs off
+	commitFrame();
+	
+	// Set pins as inputs (default state)
+	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
+	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
+	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
+
+	//TODO: munmap the gpiomap.
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+void PWM() {
+	// This is a process intended to run as a separate thread
+	// for the sake of simplicity. Really.
+	// It reads pwm_data and executes whatever is in there.
+	// In order to kill this thread gracefully, set "pwm_closing" to 1. 
+
+	auto next_step = std::chrono::system_clock::now();
+	pwm_data_datatype local_pwm_data;
+
+	gpioInit();
+
+	// Compute PWM periods for each bit
+	// Every more significant bit gets twice the time of the previous one
+	for (int i = 0; i < pwm_res; i++) {
+		pwm_periods.push_back(std::chrono::microseconds(
+				static_cast<uint32_t>(pwm_lsb_period*std::pow(2,i))));
+	}
+	
+	// Initial LED test
+	for (int i = 0; i < 16; i++) {
+		sendFrame16(1 << i);
+		commitFrame();
+		std::this_thread::sleep_for(150ms);	
+	}
+
+	while (!pwm_closing) {
+		local_pwm_data = *pwm_data.load();
+		for (int i = 0; i < pwm_res; i++) {
+			next_step += (pwm_periods[i]);
+			sendFrame16(local_pwm_data[(i+1)%pwm_res]);
+			std::this_thread::sleep_until(next_step);
+			commitFrame();
+		}
+	}
+
+	gpioDeinit();
+
+}
+
+// =================================== MAIN ====================================
+
+void signal_handle(const int s) {
+	// Handles a few POSIX signals, asking the process to die gracefully
+	
+	main_closing = 1;
+
+	if (s){};	// Suppress warning about unused, mandatory parameter
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+
+int main() {
+	// An exact time to gather measurement data and update pwm values
+	// refresh_rate determines its frequency.
+	auto next_refresh = std::chrono::system_clock::now();
+	
+	signal (SIGINT, signal_handle);		// Catches SIGINT (ctrl+c)
+	signal (SIGTERM, signal_handle);	// Catches SIGTERM
+	
+	// Create PWM thread
+	std::thread pwm_thread (PWM);
+
+	// Assign Real Time priority to PWM thread
+	sched_param sch;
+	int policy;
+	pthread_getschedparam(pwm_thread.native_handle(), &policy, &sch);
+	sch.sched_priority = 99;
+	pthread_setschedparam(pwm_thread.native_handle(), SCHED_FIFO, &sch);
+
+
+	float cpuCache = 0;
+	float ramCache = 0;
+	float tempCache = 0;
+	int divCounter = 0;
+
+	while (!main_closing) {
+
+		if (++divCounter >= ref_div) {
+			cpuCache = fetchCpu();
+			ramCache = fetchRam();
+			tempCache = fetchTemp();
+			divCounter = 0;
+		}	
+
+		cpu = cpuCache;
+		ram = ramCache;
+		temp = tempCache;
+
+		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+	
+		pwm_data_datatype* new_pwm_data = 
+			new pwm_data_datatype(format_pwms(led_pwms()));
+		pwm_data_datatype* old_pwm_data = pwm_data.exchange(new_pwm_data);
+		delete old_pwm_data;
+
+		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+
+		next_refresh += refresh_period;
+		std::this_thread::sleep_until(next_refresh);	
+	}
+
+	pwm_closing = 1;
+	pwm_thread.join();
+	exit(0);
+}
+
