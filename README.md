@@ -12,13 +12,13 @@ It also lets you monitor the basic stats (CPU, RAM, Temperature), turn the power
 - Compatible with all Raspberry Pis with 40-pin GPIO headers,
 - Supplying Raspberry Pis via screw terminals rather than USB port
 - Dual power inputs-outputs allow clean and easy daisy-chaining
-- Independent 2.5A polyfuse protection (normally unavailable via GPIO header)
+- Independent 2.5A self-healing polyfuse protection (normally unavailable via GPIO header)
 - Bulk capacitor helps preventing transient undervoltage events and eases strain on PSU,
 - 2.54mm header for power supply cut-off (using a jumper)
-- +5V LED indicator
+- +5V LED indicator (behind the fuse)
 
 - 3x 5-LED indicators of real-time CPU usage, RAM usage and CPU temperature
-- LEDs are powered by PSU directly, rather than GPIOs
+- LEDs are powered by constant-current drivers, from PSU rather than GPIOs
 - Open source daemon (pistackmond) controls LEDs
 	- Easy to compile and install on any Debian or Ubuntu-based distro
 	- One file C++ source code
@@ -32,15 +32,16 @@ It also lets you monitor the basic stats (CPU, RAM, Temperature), turn the power
 	- 3-pin header with RC-filtered 3V3 supply for IR sensors
 	- 2-pin header with 5V and BJT-reinforced low side switch, for PWM fan control
 	- Two optically isolated outputs, for pulling external logic up or down (>2.5mA)
-	- Two high-power, isolated low side switches, up to 24V and 4A
+	- Two high-power, isolated low side switches, up to 26V and 6A
 	- Alternatively, MCP1416s can be used as line drivers directly
 	- Optical isolation lets you drive separate circuits without making ground loops
+	- One isolated output and one high-power switch are connected to hardware PWM GPIO pins
 
-- Low profile PCBs allow stacking with spacers as short as 22mm,
+- Low profile PCBs allow stacking with spacers as short as 20mm,
 - No risk of contact with conductive spacers
-- 2-layer PCB design is very cheap to produce (etching not recommended due to numerous vias)
+- 2-layer PCB and strict design rules make it very cheap to produce (etching is not recommended)
 - Components selected for low cost and relatively easy assembly (One TSSOP24 chip might be tricky)
-- All components are broadly available, alternative components are listed as well
+- All components are broadly available on the market, alternative components are listed as well
 - Modular design lets you build even cheaper boards without features you don't need
 
 # Disclaimer
