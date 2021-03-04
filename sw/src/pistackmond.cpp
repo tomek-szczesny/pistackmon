@@ -16,8 +16,6 @@
 
 using namespace std::chrono_literals;
 
-//#define RASPBERRY_PI3		// I use it for debugging. :)
-
 //=========================== floatLP CLASS ====================================
 // A float with low pass filter built in
 
@@ -66,10 +64,10 @@ const int ref_div = 5;
 // Smaller values are possible at the expense of CPU load and accuracy.
 // Values under 10us are not recommended due to thread sleep accuracy.
 // For mathematical consistency it should be an integer, but you do you.
-const float pwm_lsb_period = 16;			// [us]
+const float pwm_lsb_period = 300;			// [us]
 
 // bit depth of PWM LED driver (2-16)
-const int pwm_res = 10;
+const int pwm_res = 5;
 
 // Layout vectors, containing positions of each LED in LED driver register
 const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
@@ -335,13 +333,9 @@ void sendFrame16(std::bitset<16> f) {
 
 	for(int i = 0; i < 16; i++) {
 		__sync_synchronize();
-		*(gpiomap+10) = (1 << 27);	// Set pin 27 (clk) low
-		__sync_synchronize();
-		*(gpiomap+10) = (1 << 27);	// Set pin 27 (clk) low
+		*(gpiomap+10) = (1 << 27);		// Set pin 27 (clk) low
 		//__sync_synchronize();
 		*(gpiomap+(f[15-i]?7:10)) = (1 << 17);	// Set pin 17 (data) to value f[15-i])
-		__sync_synchronize();
-		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
 		__sync_synchronize();
 		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
 	}
@@ -355,19 +349,14 @@ inline void commitFrame() {
 	// Keeping these separated helps synchronise PWM more precisely
 
 	__sync_synchronize();
-	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
+	*(gpiomap+7) = (1 << 22);			// Set pin 22 (latch) high
 	__sync_synchronize();
-	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
-	__sync_synchronize();
-	*(gpiomap+7) = (1 << 22);		// Set pin 22 (latch) high
-	__sync_synchronize();
-	*(gpiomap+10) = (1 << 22);	// Set pin 22 (latch) low
+	*(gpiomap+10) = (1 << 22);			// Set pin 22 (latch) low
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
 void gpioInit() {
-	
 
 	int gpiomem = open("/dev/mem", O_RDWR|O_SYNC);
 #ifdef RASPBERRY_PI3
@@ -414,7 +403,7 @@ void PWM() {
 	// It reads pwm_data and executes whatever is in there.
 	// In order to kill this thread gracefully, set "pwm_closing" to 1. 
 
-	auto next_step = std::chrono::system_clock::now();
+	auto next_step = std::chrono::high_resolution_clock::now();
 	pwm_data_datatype local_pwm_data;
 
 	gpioInit();
@@ -462,7 +451,7 @@ void signal_handle(const int s) {
 int main() {
 	// An exact time to gather measurement data and update pwm values
 	// refresh_rate determines its frequency.
-	auto next_refresh = std::chrono::system_clock::now();
+	auto next_refresh = std::chrono::high_resolution_clock::now();
 	
 	signal (SIGINT, signal_handle);		// Catches SIGINT (ctrl+c)
 	signal (SIGTERM, signal_handle);	// Catches SIGTERM
