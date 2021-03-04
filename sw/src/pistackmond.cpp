@@ -14,12 +14,9 @@
 #include <unistd.h>	// close()
 #include <pthread.h>	// pthread_setschedparam()
 
-#ifndef PLATFORM
-#define PLATFORM	RASPBERRY_PI3 // The default if not chosen
-#endif
-
-
 using namespace std::chrono_literals;
+
+//#define RASPBERRY_PI3		// I use it for debugging. :)
 
 //=========================== floatLP CLASS ====================================
 // A float with low pass filter built in
@@ -148,9 +145,7 @@ float fetchTemp() {
 	// Returns CPU temperature in degrees C
 
 	const std::string temp_file_name = 
-#if PLATFORM==RASPBERRY_PI3
 			"/sys/devices/virtual/thermal/thermal_zone0/temp";
-#endif
 
 	std::ifstream temp_file(temp_file_name);
 
@@ -373,10 +368,13 @@ inline void commitFrame() {
 
 void gpioInit() {
 	
-#if PLATFORM==RASPBERRY_PI3
 
 	int gpiomem = open("/dev/mem", O_RDWR|O_SYNC);
+#ifdef RASPBERRY_PI3
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0x3F200000);
+#elif defined(RASPBERRY_PI4)
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFE200000);
+#endif
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
 
@@ -390,7 +388,6 @@ void gpioInit() {
 	*(gpiomap+2) |=  (1<<(2*3));	// Pin 22
 	*(gpiomap+2) |=  (1<<(7*3));	// Pin 27
 
-#endif
 	
 }
 

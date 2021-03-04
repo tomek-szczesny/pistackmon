@@ -11,11 +11,15 @@ none:
 	@echo ""
 	@echo "Pick one of the options:"
 	@echo "make rpi3           - builds a Raspberry Pi 3 version of pistackmond"
+	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
 
 rpi3: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D PLATFORM=RASPBERRY_PI3 -o ${EXECS} ${SRC} ${LDLIBS} 
+	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI3' -o ${EXECS} ${SRC} ${LDLIBS} 
+
+rpi4: src/pistackmond.cpp
+	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI4' -o ${EXECS} ${SRC} ${LDLIBS} 
 
 clean:
 	rm ${EXECS}
