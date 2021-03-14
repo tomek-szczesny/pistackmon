@@ -14,6 +14,7 @@ none:
 	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
+	@echo "sudo make uninstall - removes pistackmond"
 
 rpi3: src/pistackmond.cpp
 	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI3' -o ${EXECS} ${SRC} ${LDLIBS} 
@@ -33,3 +34,8 @@ install:
 	systemctl daemon-reload
 	systemctl enable pistackmond
 	systemctl start pistackmond
+
+uninstall:
+	systemctl stop pistakmond
+	systemctl disable pistackmond
+	rm /usr/local/sbin/${EXECS} 
