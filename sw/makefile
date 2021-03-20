@@ -17,10 +17,10 @@ none:
 	@echo "sudo make uninstall - removes pistackmond"
 
 rpi3: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -mfloat-abi=hard -mfpu=neon-fp-armv8 -mneon-for-64bits -mtune=cortex-a53 -D'RASPBERRY_PI3' -o ${EXECS} ${SRC} ${LDLIBS} 
+	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI3' -o ${EXECS} ${SRC} ${LDLIBS} 
 
 rpi4: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -mfloat-abi=hard -mfpu=neon-fp-armv8 -mneon-for-64bits -mtune=cortex-a72 -D'RASPBERRY_PI4' -o ${EXECS} ${SRC} ${LDLIBS} 
+	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI4' -o ${EXECS} ${SRC} ${LDLIBS} 
 
 clean:
 	rm ${EXECS}
