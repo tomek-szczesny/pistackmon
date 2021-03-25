@@ -38,4 +38,8 @@ install:
 uninstall:
 	systemctl stop pistakmond
 	systemctl disable pistackmond
+	rm ${SERVICEPATH}/${SERVICE}
+	systemctl daemon-reload
+	systemctl reset-failed
 	rm /usr/local/sbin/${EXECS} 
+
