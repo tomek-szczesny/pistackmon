@@ -36,7 +36,7 @@ install:
 	systemctl start pistackmond
 
 uninstall:
-	systemctl stop pistakmond
+	systemctl stop pistackmond
 	systemctl disable pistackmond
 	rm ${SERVICEPATH}/${SERVICE}
 	systemctl daemon-reload
