@@ -472,6 +472,8 @@ int main() {
 	float tempCache = 0;
 	int divCounter = 0;
 
+	std::this_thread::sleep_for(1000ms);
+
 	while (!main_closing) {
 
 		if (++divCounter >= ref_div) {
@@ -495,6 +497,9 @@ int main() {
 		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 
 		next_refresh += refresh_period;
+		// Catch up if this thread is running really late
+		if (next_refresh < std::chrono::high_resolution_clock::now())
+			next_refresh = std::chrono::high_resolution_clock::now() + refresh_period;
 		std::this_thread::sleep_until(next_refresh);	
 	}
 
