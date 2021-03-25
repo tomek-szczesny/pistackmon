@@ -472,8 +472,6 @@ int main() {
 	float tempCache = 0;
 	int divCounter = 0;
 
-	std::this_thread::sleep_for(1000ms);
-
 	while (!main_closing) {
 
 		if (++divCounter >= ref_div) {
