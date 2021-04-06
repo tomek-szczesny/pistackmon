@@ -1,8 +1,8 @@
-#include <atomic>
 #include <bitset>
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <mutex>
 #include <signal.h>
 #include <sstream>
 #include <string>
@@ -100,8 +100,10 @@ floatLP temp(0.5, refresh_rate);
 // Each vector item contains 16 bits to be passed to LED driver.
 // Vector items are ordered from the least to most significant bits
 // in terms of PWM modulation.
+// pwm_data_mutex protects pwm_data
 typedef std::vector<std::bitset<16>> pwm_data_datatype;
-std::atomic<pwm_data_datatype *> pwm_data;
+pwm_data_datatype pwm_data;
+std::mutex pwm_data_mutex;
 
 // Map of a part of memory that provides access to GPIO registers
 volatile uint32_t * gpiomap;
@@ -423,7 +425,10 @@ void PWM() {
 	}
 
 	while (!pwm_closing) {
-		local_pwm_data = *pwm_data.load();
+		if (pwm_data_mutex.try_lock()){
+			local_pwm_data = pwm_data;
+			pwm_data_mutex.unlock();
+		}
 		for (int i = 0; i < pwm_res; i++) {
 			next_step += (pwm_periods[i]);
 			sendFrame16(local_pwm_data[(i+1)%pwm_res]);
@@ -487,10 +492,9 @@ int main() {
 
 		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 	
-		pwm_data_datatype* new_pwm_data = 
-			new pwm_data_datatype(format_pwms(led_pwms()));
-		pwm_data_datatype* old_pwm_data = pwm_data.exchange(new_pwm_data);
-		delete old_pwm_data;
+		pwm_data_mutex.lock();
+		pwm_data = format_pwms(led_pwms());
+		pwm_data_mutex.unlock();
 
 		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 
