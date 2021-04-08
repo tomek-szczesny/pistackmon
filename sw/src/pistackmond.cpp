@@ -64,10 +64,10 @@ const int ref_div = 5;
 // Smaller values are possible at the expense of CPU load and accuracy.
 // Values under 10us are not recommended due to thread sleep accuracy.
 // For mathematical consistency it should be an integer, but you do you.
-const float pwm_lsb_period = 300;			// [us]
+const float pwm_lsb_period = 250;			// [us]
 
 // bit depth of PWM LED driver (2-16)
-const int pwm_res = 5;
+const int pwm_res = 6;
 
 // Layout vectors, containing positions of each LED in LED driver register
 const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
