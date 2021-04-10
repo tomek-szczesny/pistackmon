@@ -430,7 +430,11 @@ void PWM() {
 			pwm_data_mutex.unlock();
 		}
 		for (int i = 0; i < pwm_res; i++) {
-			next_step += (pwm_periods[i]);
+			next_step += pwm_periods[i];
+			// Catch up if this thread is running really late
+			// Happens if daemon launches before Pi updates real time clock
+			if (next_step < std::chrono::high_resolution_clock::now())
+				next_step = std::chrono::high_resolution_clock::now() + pwm_periods[i];
 			sendFrame16(local_pwm_data[(i+1)%pwm_res]);
 			std::this_thread::sleep_until(next_step);
 			commitFrame();
@@ -500,6 +504,7 @@ int main() {
 
 		next_refresh += refresh_period;
 		// Catch up if this thread is running really late
+		// Happens if daemon launches before Pi updates real time clock
 		if (next_refresh < std::chrono::high_resolution_clock::now())
 			next_refresh = std::chrono::high_resolution_clock::now() + refresh_period;
 		std::this_thread::sleep_until(next_refresh);	
