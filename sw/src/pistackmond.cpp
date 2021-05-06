@@ -419,12 +419,14 @@ void PWM() {
 				static_cast<uint32_t>(pwm_lsb_period*std::pow(2,i))));
 	}
 	
+	/*
 	// Initial LED test
 	for (int i = 0; i < 16; i++) {
 		sendFrame16(1 << i);
 		commitFrame();
 		std::this_thread::sleep_for(150ms);	
 	}
+	*/
 
 	while (!pwm_closing) {
 		if (pwm_data_mutex.try_lock()){
@@ -481,6 +483,7 @@ int main(int argc, char*argv[]) {
 			exit(0);
 		}
 	}
+
 	// An exact time to gather measurement data and update pwm values
 	// refresh_rate determines its frequency.
 	auto next_refresh = std::chrono::high_resolution_clock::now();
