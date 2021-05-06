@@ -384,10 +384,12 @@ void gpioInit() {
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
-void gpioDeinit() {
+void gpioDeinit(bool noclear = false) {
 
-	sendFrame16(0);		// Turn all them LEDs off
-	commitFrame();
+	if (!noclear) {
+		sendFrame16(0);		// Turn all them LEDs off
+		commitFrame();
+	}
 	
 	// Set pins as inputs (default state)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
@@ -457,13 +459,31 @@ void signal_handle(const int s) {
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
-int main() {
+int main(int argc, char*argv[]) {
+
+	signal (SIGINT, signal_handle);		// Catches SIGINT (ctrl+c)
+	signal (SIGTERM, signal_handle);	// Catches SIGTERM
+	
+	if (argc==2) {		// If there's exactly one argument
+		std::string argument = argv[1];
+		if (argument == "allon") {
+			gpioInit();
+			sendFrame16(-1);	// Dirty "all ones" hack
+			commitFrame();
+			gpioDeinit(1);
+			exit(0);
+		}
+		if (argument == "alloff") {
+			gpioInit();
+			sendFrame16(0);
+			commitFrame();
+			gpioDeinit(1);
+			exit(0);
+		}
+	}
 	// An exact time to gather measurement data and update pwm values
 	// refresh_rate determines its frequency.
 	auto next_refresh = std::chrono::high_resolution_clock::now();
-	
-	signal (SIGINT, signal_handle);		// Catches SIGINT (ctrl+c)
-	signal (SIGTERM, signal_handle);	// Catches SIGTERM
 	
 	// Create PWM thread
 	std::thread pwm_thread (PWM);
