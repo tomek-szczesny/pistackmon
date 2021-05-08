@@ -74,14 +74,15 @@ const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
 const std::vector<int> ram_layout = {9, 8, 7, 6, 5};
 const std::vector<int> temp_layout = {11, 10, 12, 13, 14};
 
-// Led intensities adjusted by color (green LEDs tend to appear much brighter,
-// so their PWM values are decreased to compensate)
-const float led_g = 0.3;
+// Led intensities adjusted by color 
+// Depending on LED make and model, some colors might appear brighter than others
+// Consts below may be used to equalize these differences
+const float led_g = 1;
 const float led_y = 1;
 const float led_r = 1;
 const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
-						led_r, led_y, led_y, led_g, led_g,
-						led_g, led_g, led_g, led_y, led_r};
+						led_r, led_y, led_g, led_g, led_g,
+						led_g, led_g, led_y, led_r, led_r};
 
 // Gamma correction for LEDs
 // It is not the proper way to linearize the LED response, but close enough

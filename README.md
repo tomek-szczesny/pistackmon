@@ -77,8 +77,12 @@ That's it!
 
 This chapter will definitely need some love, but for now just be sure to follow a few guidelines off the top of my head:
 - Decide which features you need or not. As a rule of thumb, you may ignore any boxed part of a schematic independently.
-- Inspect your soldering job and clean the board before you go ahead and solder the 40-pin connector. Removing it afterwards is next to impossible.
-- After soldering, make sure you clean your board _very carefully_ from any traces of flux, especially under and around the LED driver chip. Dip it in pure alcohol for an hour if you have to. Failing to do so may make some LEDs glow even though these are off.
+- Check the datasheet of your LEDs or experiment to determine what is the optimal driving current for them. Some LEDs need 1mA, some 10mA. There are no recommended LEDs for PiStackMon.
+- If different colors of your LEDs of choice have different intensities, don't worry, there are const values in the code to compensate for that.
+- "NM" resistors are simply Not Mounted - leave these places empty, unlesss you want to hack PiStackMon for other purposes.
+- Before you do anything, just remember that 40-pin connector should be mounted as the very last component, after you make sure everything else works. Consider it a permanent component, because removing it is indeed a pain in the rectum.
+- Mount everything you plan to include, except 40-pin connector and C1. Power up your SBC using its original power input. You may test PiStackMon by carefully connecting it to SBC's GPIO header directly, and applying some tension to ensure proper connection. It is a good idea to check if all LEDs work correctly and that you picked the right LED currents.
+- After soldering, make sure you clean your board _very carefully_ from any traces of flux, especially under and around the LED driver chip. Dip it in pure alcohol for an hour if you have to. Failing to do so may make some LEDs glow even though these are supposed to be off.
 - Place a tiny heatsink on a low side high-power switch MOSFET if you plan to thrash the living hell out of it.
 
 

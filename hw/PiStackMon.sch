@@ -502,7 +502,7 @@ Wire Wire Line
 	4250 6800 4250 6900
 Text Notes 2600 6450 0    50   ~ 0
 Power Supply bulk capacitor\nPower ON jumper \n2.5A Polyfuse
-Text Notes 8700 6200 0    79   ~ 0
+Text Notes 10050 1150 0    79   ~ 0
 LED indicators
 Wire Notes Line
 	6900 3450 550  3450
@@ -713,7 +713,7 @@ L Device:LED D8
 U 1 1 6021867F
 P 8800 1250
 F 0 "D8" V 8839 1132 50  0000 R CNN
-F 1 "Y" V 8748 1132 50  0000 R CNN
+F 1 "G" V 8748 1132 50  0000 R CNN
 F 2 "LED_SMD:LED_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 8800 1250 50  0001 C CNN
 F 3 "~" H 8800 1250 50  0001 C CNN
 F 4 "60%" V 8950 1150 50  0000 C CNN "Comment"
@@ -875,7 +875,7 @@ L Device:LED D12
 U 1 1 602B8CFE
 P 9800 3050
 F 0 "D12" V 9839 2932 50  0000 R CNN
-F 1 "Y" V 9748 2932 50  0000 R CNN
+F 1 "R" V 9748 2932 50  0000 R CNN
 F 2 "LED_SMD:LED_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 9800 3050 50  0001 C CNN
 F 3 "~" H 9800 3050 50  0001 C CNN
 F 4 "80°C" H 10000 3100 50  0000 C CNN "Comment"
@@ -890,7 +890,7 @@ L Device:LED D13
 U 1 1 602B8D05
 P 9800 2700
 F 0 "D13" V 9839 2582 50  0000 R CNN
-F 1 "G" V 9748 2582 50  0000 R CNN
+F 1 "Y" V 9748 2582 50  0000 R CNN
 F 2 "LED_SMD:LED_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 9800 2700 50  0001 C CNN
 F 3 "~" H 9800 2700 50  0001 C CNN
 F 4 "70°C" H 10000 2750 50  0000 C CNN "Comment"
@@ -1996,9 +1996,29 @@ Connection ~ 3250 6900
 Wire Wire Line
 	3250 6900 3500 6900
 Text Notes 7100 6400 0    50   ~ 0
-Alternatives:\nU1=STP16CP05TTR; R2=7k5\nU1=STP16DP05XTTR; R2=7k5\nU1=TLC5928PW(R); R2=24k\nU1=CAT4016Y;R2=30k (or 60k for 1mA)
+Alternatives:\nU1=STP16CP05TTR\nU1=STP16DP05XTTR\nU1=TLC5928PW(R)\nU1=CAT4016Y
 Text Notes 3900 7650 0    50   ~ 0
 Alternatives:\nF1=MF-MSMF250/16X\nF1=SMD1812B260TF\nF1=SMD1812P260TF
 Wire Wire Line
 	3800 6900 4250 6900
+Text Notes 8000 6400 0    50   ~ 0
+2mA\nR2=7k5\nR2=7k5\nR2=24k\nR2=30k
+Text Notes 7200 5950 0    50   ~ 0
+Set LED current by selecting R2. Consult LED datasheet.
+Text Notes 8400 6400 0    50   ~ 0
+5mA\nR2=4k3\nR2=4k3\nR2=10k\nR2=12k
+Text Notes 8800 6400 0    50   ~ 0
+10mA\nR2=2k\nR2=2k\nR2=5k1\nR2=6k2
+Text Notes 9200 6400 0    50   ~ 0
+20mA\nR2=1k\nR2=1k\nR2=2k4\nR2=3k
+Text Notes 9900 6350 0    50   ~ 0
+Adjust R3 for desired LED current
+Wire Notes Line
+	7050 5850 9550 5850
+Wire Notes Line
+	9550 5850 9550 6450
+Wire Notes Line
+	9550 6450 7050 6450
+Wire Notes Line
+	7050 6450 7050 5850
 $EndSCHEMATC
