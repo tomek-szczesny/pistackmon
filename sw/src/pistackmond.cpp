@@ -370,6 +370,9 @@ void gpioInit() {
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
 
+	// TODO: The following code will segfault if not run as root.
+	// Let the user know what is wrong!
+	//
 	// Set pins as inputs (reset 3-bit pin mode to 000)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
 	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
@@ -433,6 +436,10 @@ void PWM() {
 		if (pwm_data_mutex.try_lock()){
 			local_pwm_data = pwm_data;
 			pwm_data_mutex.unlock();
+		}
+		if (local_pwm_data.size() < pwm_res) {	// Avoid segfaults when pwm data not initialized yet
+			std::this_thread::sleep_for(100ms);
+			continue;
 		}
 		for (int i = 0; i < pwm_res; i++) {
 			next_step += pwm_periods[i];
