@@ -57,8 +57,11 @@ Ask an expert before you mess with stuff you don't understand.
 Log in to your SBC and type in a few commands:
 
 ```
-# Install a few prerequisites
+# Install a few prerequisites (On Debian, Ubuntu etc.)
 sudo apt install git g++ make
+# (on Arch, Manjaro etc.)
+sudo pacman -S git gcc make
+
 # clone this repository
 git clone https://github.com/tomek-szczesny/pistackmon.git
 
