@@ -119,13 +119,13 @@ bool main_closing = 0;
 
 //=================================== MISC =====================================
 
-std::vector<int> getIntsFromLine(std::string s) {
+std::vector<long int> getIntsFromLine(std::string s) {
 	// Returns all integers found in a given string
 
 	std::string temp_s;
-	int temp_i;
+	long int temp_i;
 	std::stringstream ss;
-	std::vector<int> output;
+	std::vector<long int> output;
 
 	ss << s;
 
@@ -179,8 +179,8 @@ float fetchCpu() {
 	// It is recommended to apply some sort of low-pass filter
 	// for more meaningful long-term results.
 
-	static std::vector<int> last_stat;
-	std::vector<int> current_stat;
+	static std::vector<long int> last_stat;
+	std::vector<long int> current_stat;
 	int temp_i = 0;
 	std::string temp_s;
 
