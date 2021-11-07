@@ -57,7 +57,7 @@ Ask an expert before you mess with stuff you don't understand.
 Log in to your SBC and type in a few commands:
 
 ```
-# Install a few prerequisites (On Debian, Ubuntu etc.)
+# Install a few prerequisites (On Raspberry Pi OS, Debian, Ubuntu etc.)
 sudo apt install git g++ make
 # (on Arch, Manjaro etc.)
 sudo pacman -S git gcc make
@@ -68,8 +68,8 @@ git clone https://github.com/tomek-szczesny/pistackmon.git
 cd pistackmon/sw
 # check out building options
 make
-# build an executable (example for Raspberry Pi 3)
-make rpi3
+# build an executable (example for Raspberry Pi 4)
+make rpi4
 # install and run a service
 sudo make install
 ```
