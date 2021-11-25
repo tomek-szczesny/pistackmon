@@ -366,10 +366,17 @@ inline void commitFrame() {
 	// Thus applying whatever has been previously sent to it
 	// Keeping these separated helps synchronise PWM more precisely
 
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
+	__sync_synchronize();
+	*(gpiomap+7) = (1 << 22);			// Set pin 22 (latch) high
+	__sync_synchronize();
+	*(gpiomap+10) = (1 << 22);			// Set pin 22 (latch) low
+#elif defined (ODROID_N2)
 	__sync_synchronize();
 	*(gpiomap+0x117) |= (1 << 7);			// Set pin X.7 (latch) high
 	__sync_synchronize();
 	*(gpiomap+0x117) &= ~(1 << 7);			// Set pin X.7 (latch) low
+#endif
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
