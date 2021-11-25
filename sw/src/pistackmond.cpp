@@ -334,14 +334,29 @@ pwm_data_datatype format_pwms(std::vector<float> pwms) {
 void sendFrame16(std::bitset<16> f) {
 	// Sends data to LED driver chip but does not latch it
 
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	for(int i = 0; i < 16; i++) {
 		__sync_synchronize();
 		*(gpiomap+10) = (1 << 27);		// Set pin 27 (clk) low
-		//__sync_synchronize();
 		*(gpiomap+(f[15-i]?7:10)) = (1 << 17);	// Set pin 17 (data) to value f[15-i])
 		__sync_synchronize();
 		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
 	}
+#elif defined (ODROID_N2)
+	for(int i = 0; i < 16; i++) {
+		__sync_synchronize();
+		*(gpiomap+0x117) &= ~(1 << 4);		// Set pin X.4 (clk) low
+		if(f[15-i]) {				// Set pin X.3 (data) high
+			*(gpiomap+0x117) |= (1 << 3);
+		}
+		else {					// Set pin X.3 (data) low
+			*(gpiomap+0x117) &= ~(1 << 3);
+		}
+		__sync_synchronize();
+		*(gpiomap+0x117) |= (1 << 4);		// Set pin X.4 (clk) high
+	}
+#endif
+
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
@@ -352,9 +367,9 @@ inline void commitFrame() {
 	// Keeping these separated helps synchronise PWM more precisely
 
 	__sync_synchronize();
-	*(gpiomap+7) = (1 << 22);			// Set pin 22 (latch) high
+	*(gpiomap+0x117) |= (1 << 7);			// Set pin X.7 (latch) high
 	__sync_synchronize();
-	*(gpiomap+10) = (1 << 22);			// Set pin 22 (latch) low
+	*(gpiomap+0x117) &= ~(1 << 7);			// Set pin X.7 (latch) low
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
@@ -366,13 +381,16 @@ void gpioInit() {
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0x3F200000);
 #elif defined(RASPBERRY_PI4)
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFE200000);
+#elif defined(ODROID_N2)
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFF634000);
 #endif
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
 
 	// TODO: The following code will segfault if not run as root.
 	// Let the user know what is wrong!
-	//
+
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	// Set pins as inputs (reset 3-bit pin mode to 000)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
 	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
@@ -382,7 +400,18 @@ void gpioInit() {
 	*(gpiomap+1) |=  (1<<(7*3));	// Pin 17
 	*(gpiomap+2) |=  (1<<(2*3));	// Pin 22
 	*(gpiomap+2) |=  (1<<(7*3));	// Pin 27
+#elif defined(ODROID_N2)
+	// Set pins as outputs 
+	*(gpiomap+0x116) &= ~(1<<3);		// Pin X.3
+	*(gpiomap+0x116) &= ~(1<<4);		// Pin X.4
+	*(gpiomap+0x116) &= ~(1<<7);		// Pin X.7
 
+	// Do something with mux (eh? whatever that means)
+	*(gpiomap+0x1B3) &=  (0xF<<3*4);	// Pin X.3
+	*(gpiomap+0x1B3) &=  (0xF<<4*4);	// Pin X.4
+	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
+	
+#endif
 	
 }
 
@@ -396,9 +425,15 @@ void gpioDeinit(bool noclear = false) {
 	}
 	
 	// Set pins as inputs (default state)
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
 	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
 	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
+#elif defined(ODROID_N2)
+	*(gpiomap+0x116) |= (1<<3);		// Pin X.3
+	*(gpiomap+0x116) |= (1<<4);		// Pin X.4
+	*(gpiomap+0x116) |= (1<<7);		// Pin X.7
+#endif
 
 	//TODO: munmap the gpiomap.
 }

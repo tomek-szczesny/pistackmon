@@ -12,6 +12,7 @@ none:
 	@echo "Pick one of the options:"
 	@echo "make rpi3           - builds a Raspberry Pi 3 version of pistackmond"
 	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
+	@echo "make n2             - builds a Odroid N2 version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
 	@echo "sudo make uninstall - removes pistackmond"
@@ -21,6 +22,9 @@ rpi3: src/pistackmond.cpp
 
 rpi4: src/pistackmond.cpp
 	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI4' -o ${EXECS} ${SRC} ${LDLIBS} 
+
+n2: src/pistackmond.cpp
+	${GCC} ${LIBS} ${GCCFLAGS} -D'ODROID_N2' -o ${EXECS} ${SRC} ${LDLIBS} 
 
 clean:
 	rm ${EXECS}
