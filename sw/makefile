@@ -19,16 +19,16 @@ none:
 	@echo "sudo make uninstall - removes pistackmond"
 
 rpi3:
-	make $(EXECS) PLATFORM=RASPBERRY_PI3
+	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI3
 
 rpi4:
-	make $(EXECS) PLATFORM=RASPBERRY_PI4
+	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI4
 
 n2:
-	make $(EXECS) PLATFORM=ODROID_N2
+	${MAKE} $(EXECS) PLATFORM=ODROID_N2
 
 c1:
-	make $(EXECS) PLATFORM=ODROID_C1
+	${MAKE} $(EXECS) PLATFORM=ODROID_C1
 
 ${EXECS}: src/pistackmond.cpp
 	${GCC} ${LIBS} ${GCCFLAGS} -D=${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
