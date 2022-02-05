@@ -1,3 +1,4 @@
+PREFIX=/usr/local
 EXECS=pistackmond
 GCC?=g++
 SRC=src/pistackmond.cpp
@@ -34,9 +35,12 @@ ${EXECS}: src/pistackmond.cpp
 	${GCC} ${LIBS} ${GCCFLAGS} -D=${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
 
 clean:
-	rm -f ${EXECS}
+	rm -f ${EXECS} ${SERVICE}
 
-install: ${EXECS}
+${SERVICE}: ${SERVICE}.in
+	sed -e "s/PREFIX/$PREFIX/" $< > $@
+
+install: ${EXECS} ${SERVICE}
 	cp ${EXECS} /usr/local/sbin
 	chown root:root /usr/local/sbin/${EXECS}
 	cp ${SERVICE} ${SERVICEPATH}
