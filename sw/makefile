@@ -41,11 +41,8 @@ ${SERVICE}: ${SERVICE}.in
 	sed -e "s/PREFIX/$PREFIX/" $< > $@
 
 install: ${EXECS} ${SERVICE}
-	cp ${EXECS} /usr/local/sbin
-	chown root:root /usr/local/sbin/${EXECS}
-	cp ${SERVICE} ${SERVICEPATH}
-	chown root:root ${SERVICEPATH}/${SERVICE}
-	chmod 644 ${SERVICEPATH}/${SERVICE}
+	install -p -s ${EXECS} ${PREFIX}/sbin
+	install -p -s -m 0664  ${SERVICE} ${SERVICEPATH}
 	systemctl daemon-reload
 	systemctl enable pistackmond
 	systemctl start pistackmond
@@ -53,8 +50,8 @@ install: ${EXECS} ${SERVICE}
 uninstall:
 	systemctl stop pistackmond
 	systemctl disable pistackmond
-	rm ${SERVICEPATH}/${SERVICE}
+	rm -f ${SERVICEPATH}/${SERVICE}
 	systemctl daemon-reload
 	systemctl reset-failed
-	rm /usr/local/sbin/${EXECS} 
+	rm -f ${PREFIX}/sbin/${EXECS}
 
