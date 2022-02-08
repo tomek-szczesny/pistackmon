@@ -30,7 +30,7 @@ sudo checkinstall \
   --pkglicense=GPL3 \
   --pkgsource=https://github.com/tomek-szczesny/pistackmon \
   --pkgaltsource=https://github.com/tomek-szczesny/pistackmon \
-  --maintainer=t.szczesny@10g.pl \
+  --maintainer=bablokb@gmx.de \
   --provides= \
   --nodoc \
   --backup=no \
