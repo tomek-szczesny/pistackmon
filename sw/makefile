@@ -1,3 +1,4 @@
+SHELL=/bin/bash
 PREFIX=/usr/local
 EXECS=pistackmond
 GCC?=g++
@@ -38,14 +39,14 @@ clean:
 	rm -f ${EXECS} ${SERVICE}
 
 ${SERVICE}: ${SERVICE}.in
-	sed -e "s/PREFIX/$PREFIX/" $< > $@
+	sed -e "s,PREFIX,${PREFIX}," $< > $@
 
 install: ${EXECS} ${SERVICE}
 	install -p -s ${EXECS} ${PREFIX}/sbin
-	install -p -s -m 0664  ${SERVICE} ${SERVICEPATH}
+	install -p -m 0664  ${SERVICE} ${SERVICEPATH}
 	systemctl daemon-reload
-	systemctl enable pistackmond
-	systemctl start pistackmond
+	-systemctl enable pistackmond
+	-systemctl start pistackmond
 
 uninstall:
 	systemctl stop pistackmond
@@ -54,4 +55,3 @@ uninstall:
 	systemctl daemon-reload
 	systemctl reset-failed
 	rm -f ${PREFIX}/sbin/${EXECS}
-
