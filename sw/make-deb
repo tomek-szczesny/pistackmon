@@ -1,0 +1,44 @@
+#!/bin/bash
+# --------------------------------------------------------------------------
+# Create deb-package after compile
+#
+# Author: Bernhard Bablok
+# License: GPL3
+#
+# Website: https://github.com/tomek-szczesny/pistackmon
+#
+# --------------------------------------------------------------------------
+
+PLATFORM="$1"
+if [ -z "$PLATFORM" ]; then
+  echo "usage: $0 platform" >&2
+  exit
+else
+  # strip some stuff added by makefile and convert to lower-case
+  PLATFORM="${PLATFORM##*_}"
+  PLATFORM="${PLATFORM,,}"
+fi
+
+echo "pistackmond daemon" > description-pak
+
+sudo checkinstall \
+  --default \
+  --install=no \
+  --pkgname=pistackmond-$PLATFORM \
+  --pkgversion=1.0.0 \
+  --pkgrelease=1 \
+  --pkglicense=GPL3 \
+  --pkgsource=https://github.com/tomek-szczesny/pistackmon \
+  --pkgaltsource=https://github.com/tomek-szczesny/pistackmon \
+  --maintainer=t.szczesny@10g.pl \
+  --provides= \
+  --nodoc \
+  --backup=no \
+  --deldoc=yes \
+  --deldesc=yes
+
+rm -f description-pak
+
+echo "created package. Changing owner to $USER:$GROUPS"
+
+sudo chown $USER:$GROUPS pistackmond-*.deb
