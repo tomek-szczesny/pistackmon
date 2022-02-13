@@ -247,7 +247,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/00000000-0000-0000-0000-00005ff3a52c")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "JP1" (at 0 -2.5 90) (layer "F.SilkS") hide
       (effects (font (size 0.8 0.8) (thickness 0.16)))
       (tstamp d0420273-1850-4c54-ba2f-91ed15860c61)
@@ -989,7 +989,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/00000000-0000-0000-0000-00006004b97d")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "J3" (at 2.58 -3 90) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp b3ce5ff1-44af-4efd-a89e-90ad5cc79940)
@@ -1088,9 +1088,9 @@
     (fp_line (start 2.25 1.6) (end -2.25 1.6) (layer "F.Fab") (width 0.1) (tstamp 503908a7-79db-47a3-ad0e-0272b16caa46))
     (fp_line (start 2.25 -1.6) (end 2.25 1.6) (layer "F.Fab") (width 0.1) (tstamp 798e14d0-9223-41c4-8c20-bbe2a98f9f49))
     (fp_line (start -2.25 1.6) (end -2.25 -1.6) (layer "F.Fab") (width 0.1) (tstamp 973f91d1-2428-4f97-9d5e-bed4ad1f882e))
-    (pad "1" smd roundrect (at -2.1375 0 270) (size 1.125 3.4) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.222222)
+    (pad "1" smd roundrect (at -2.1375 0 270) (size 1.125 3.4) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2222222222)
       (net 2 "+5V") (pintype "passive") (tstamp 56a3a45c-b2ed-403b-93a2-0330ac8fb669))
-    (pad "2" smd roundrect (at 2.1375 0 270) (size 1.125 3.4) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.222222)
+    (pad "2" smd roundrect (at 2.1375 0 270) (size 1.125 3.4) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2222222222)
       (net 45 "Net-(C1-Pad1)") (pintype "passive") (tstamp 254bd294-8b71-469e-bab2-1ec75529aaa7))
     (model "${KICAD6_3DMODEL_DIR}/Fuse.3dshapes/Fuse_1210_3225Metric.wrl"
       (offset (xyz 0 0 0))
@@ -1329,9 +1329,9 @@
     (fp_line (start -1.6 -0.8) (end 1.6 -0.8) (layer "F.Fab") (width 0.1) (tstamp 512aebf9-facf-4635-b451-b0ce767e9a8f))
     (fp_line (start 1.6 0.8) (end -1.6 0.8) (layer "F.Fab") (width 0.1) (tstamp 58a35b82-45e6-42f0-be12-bb3f97d8202a))
     (fp_line (start -1.6 0.8) (end -1.6 -0.8) (layer "F.Fab") (width 0.1) (tstamp cc293cde-799f-43e2-bcdf-4a13b2938b87))
-    (pad "1" smd roundrect (at -1.475 0 90) (size 1.15 1.8) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.217391)
+    (pad "1" smd roundrect (at -1.475 0 90) (size 1.15 1.8) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2173913043)
       (net 45 "Net-(C1-Pad1)") (pintype "passive") (tstamp b9dbf838-e849-4c54-b039-874e1b8c0d72))
-    (pad "2" smd roundrect (at 1.475 0 90) (size 1.15 1.8) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.217391)
+    (pad "2" smd roundrect (at 1.475 0 90) (size 1.15 1.8) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.2173913043)
       (net 3 "GND") (pintype "passive") (tstamp 81cb5059-6a99-4775-98f0-02ed845f2463))
     (model "${KICAD6_3DMODEL_DIR}/Capacitor_SMD.3dshapes/C_1206_3216Metric.wrl"
       (offset (xyz 0 0 0))
@@ -1348,7 +1348,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/22443b40-20d8-4d0c-ac82-015f4a3075de")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "J1" (at 0 -2.33 90) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp f010b7b3-c3e8-4814-af29-bc25a4758a0a)
@@ -1395,7 +1395,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/627a7595-defc-4641-8978-388bde3b0c5d")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "H1" (at 0.14 -1.5 unlocked) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp f5c13de5-78e0-4380-a91c-e003af6c1a92)
@@ -1504,7 +1504,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/fa3ad873-fb62-4219-b54f-9a05130a3999")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "J2" (at 0 -2.33 90) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp efa27c31-b2ce-442c-9058-704c8fc1028f)
@@ -1551,7 +1551,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/333378d1-10c0-46fb-a68e-c4a41af49377")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "H2" (at 0.14 -1.5 unlocked) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 68e37aa6-dbe3-43ab-b652-7cda5ef75740)
@@ -1572,7 +1572,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/cd38c809-d598-42a8-bc42-eac1a2c93b82")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "J5" (at 5.75 8.45) (layer "F.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 73b5ed24-63f8-4afa-89d5-3fbc5c340a91)
@@ -1679,7 +1679,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/00000000-0000-0000-0000-00005fffca9e")
-    (attr exclude_from_pos_files)
+    (attr exclude_from_pos_files exclude_from_bom)
     (fp_text reference "LOGO1" (at 0 -4.5) (layer "B.SilkS") hide
       (effects (font (size 0.8 0.8) (thickness 0.16)) (justify mirror))
       (tstamp 47519c08-1f14-4680-80d6-d79a1087f291)
@@ -3064,7 +3064,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/00000000-0000-0000-0000-000059ad464a")
-    (attr through_hole)
+    (attr through_hole exclude_from_pos_files exclude_from_bom)
     (fp_text reference "P1" (at -1.27 2.77 90) (layer "B.SilkS") hide
       (effects (font (size 0.8 0.8) (thickness 0.15)) (justify mirror))
       (tstamp a1a905df-4ed5-41a8-aeef-e3264cb98f0c)
@@ -3191,7 +3191,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/881c13df-7641-4739-9f21-eeffc82890b8")
-    (attr smd)
+    (attr smd exclude_from_pos_files exclude_from_bom)
     (fp_text reference "R1" (at 0 1.65 90) (layer "B.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)) (justify mirror))
       (tstamp dfe9e57c-b62e-4af1-bb1b-a03cd7a96f62)
@@ -3214,9 +3214,9 @@
     (fp_line (start 1 0.625) (end 1 -0.625) (layer "B.Fab") (width 0.1) (tstamp 1eae0866-fb43-460e-ba70-4206816f3ae0))
     (fp_line (start -1 -0.625) (end -1 0.625) (layer "B.Fab") (width 0.1) (tstamp 5a7a8c16-813c-4d39-bb38-4fe8173d3667))
     (fp_line (start 1 -0.625) (end -1 -0.625) (layer "B.Fab") (width 0.1) (tstamp f8d012dd-63b9-47a5-958f-658194a808e3))
-    (pad "1" smd roundrect (at -1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.208333)
+    (pad "1" smd roundrect (at -1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.2083333333)
       (net 49 "/3V3_2") (pintype "passive") (tstamp 2d09bdfd-a6c5-427d-8a7f-fcce2026b09a))
-    (pad "2" smd roundrect (at 1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.208333)
+    (pad "2" smd roundrect (at 1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.2083333333)
       (net 10 "/GPIO3(SCL1)") (pintype "passive") (tstamp e631b78c-5ebe-49d3-ac74-86ce32f8377f))
     (model "${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0805_2012Metric.wrl"
       (offset (xyz 0 0 0))
@@ -3235,7 +3235,7 @@
     (property "Sheetfile" "PiStackMon_lite.kicad_sch")
     (property "Sheetname" "")
     (path "/356a997d-9f21-4014-b1ae-7da6a8302796")
-    (attr smd)
+    (attr smd exclude_from_pos_files exclude_from_bom)
     (fp_text reference "R4" (at 0 1.65 90) (layer "B.SilkS") hide
       (effects (font (size 1 1) (thickness 0.15)) (justify mirror))
       (tstamp ec2952dd-055b-4f00-906e-4bdb54383563)
@@ -3258,9 +3258,9 @@
     (fp_line (start 1 -0.625) (end -1 -0.625) (layer "B.Fab") (width 0.1) (tstamp 9cb35d60-e2a6-4cef-b26f-35c25d9959a4))
     (fp_line (start -1 -0.625) (end -1 0.625) (layer "B.Fab") (width 0.1) (tstamp 9f7cc47c-56e9-4e63-9c9a-0b58cfd14c7f))
     (fp_line (start -1 0.625) (end 1 0.625) (layer "B.Fab") (width 0.1) (tstamp ef05591f-673b-4c8c-a0a5-8a246f1538bb))
-    (pad "1" smd roundrect (at -1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.208333)
+    (pad "1" smd roundrect (at -1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.2083333333)
       (net 49 "/3V3_2") (pintype "passive") (tstamp a163b8ed-3eea-4a51-bd03-037f3e4ba562))
-    (pad "2" smd roundrect (at 1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.208333)
+    (pad "2" smd roundrect (at 1 0 90) (size 1.2 1.4) (layers "B.Cu" "B.Paste" "B.Mask") (roundrect_rratio 0.2083333333)
       (net 9 "/GPIO2(SDA1)") (pintype "passive") (tstamp 28f6e37d-1a92-457e-a624-01fe097c3518))
     (model "${KICAD6_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0805_2012Metric.wrl"
       (offset (xyz 0 0 0))
