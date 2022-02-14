@@ -161,7 +161,6 @@ float fetchTemp() {
 	temp_file.close();
 	result /= 1000;
 	return result;	
-#endif
 }
 
 //------------------------------------------------------------------------------
