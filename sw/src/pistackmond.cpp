@@ -145,18 +145,15 @@ std::vector<long int> getIntsFromLine(std::string s) {
 float fetchTemp() {
 	// Returns CPU temperature in degrees C
 
-#if defined (ODROID_C1)
-  return 0.0;
-#else
 	const std::string temp_file_name = 
 			"/sys/devices/virtual/thermal/thermal_zone0/temp";
 
 	std::ifstream temp_file(temp_file_name);
 
 	if(!temp_file.is_open()) {
-		std::printf("Unable to open %s. Quitting!\n",
+          	std::fprintf(stderr,"Unable to open %s.\n",
 						temp_file_name.c_str());
-		exit(-1);
+		return -1.0;
 	}
 
 	float result;
@@ -192,7 +189,7 @@ repeat:
 
 	std::ifstream cpu_file("/proc/stat");
 	if(!cpu_file.is_open()) {
-		std::printf("Unable to open /proc/stat. Quitting!\n");
+          	std::fprintf(stderr,"Unable to open /proc/stat. Quitting!\n");
 		exit(-1);
 	}
 
@@ -245,7 +242,7 @@ float fetchRam() {
 
 	std::ifstream mem_file("/proc/meminfo");
 	if(!mem_file.is_open()) {
-		std::printf("Unable to open /proc/meminfo. Quitting!\n");
+          	std::fprintf(stderr,"Unable to open /proc/meminfo. Quitting!\n");
 		exit(-1);
 	}
 
@@ -591,13 +588,16 @@ int main(int argc, char*argv[]) {
 		if (++divCounter >= ref_div) {
 			cpuCache = fetchCpu();
 			ramCache = fetchRam();
-			tempCache = fetchTemp();
+                        if (tempCache >= 0.0) {
+                          // returns -1 if thermal_zone0 is missing
+                          tempCache = fetchTemp();
+                        }
 			divCounter = 0;
 		}	
 
 		cpu = cpuCache;
 		ram = ramCache;
-		temp = tempCache;
+		temp = tempCache < 0.0 ? 0.0:tempCache;
 
 		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 	
