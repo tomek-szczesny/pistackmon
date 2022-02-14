@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name "bga")(type "KiCad")(uri "/home/mctom/kicad")(options "")(descr ""))
+  (lib (name "JLC")(type "KiCad")(uri "/home/mctom/JLC.pretty")(options "")(descr ""))
+)
