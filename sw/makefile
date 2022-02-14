@@ -1,3 +1,5 @@
+SHELL=/bin/bash
+PREFIX=/usr/local
 EXECS=pistackmond
 GCC?=g++
 SRC=src/pistackmond.cpp
@@ -13,37 +15,43 @@ none:
 	@echo "make rpi3           - builds a Raspberry Pi 3 version of pistackmond"
 	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
 	@echo "make n2             - builds a Odroid N2 version of pistackmond"
+	@echo "make c1             - builds a Odroid C1(+) version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
 	@echo "sudo make uninstall - removes pistackmond"
 
-rpi3: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI3' -o ${EXECS} ${SRC} ${LDLIBS} 
+rpi3:
+	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI3
 
-rpi4: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D'RASPBERRY_PI4' -o ${EXECS} ${SRC} ${LDLIBS} 
+rpi4:
+	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI4
 
-n2: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D'ODROID_N2' -o ${EXECS} ${SRC} ${LDLIBS} 
+n2:
+	${MAKE} $(EXECS) PLATFORM=ODROID_N2
+
+c1:
+	${MAKE} $(EXECS) PLATFORM=ODROID_C1
+
+${EXECS}: src/pistackmond.cpp
+	${GCC} ${LIBS} ${GCCFLAGS} -D=${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
 
 clean:
-	rm ${EXECS}
+	rm -f ${EXECS} ${SERVICE}
 
-install:
-	cp ${EXECS} /usr/local/sbin
-	chown root:root /usr/local/sbin/${EXECS}
-	cp ${SERVICE} ${SERVICEPATH}
-	chown root:root ${SERVICEPATH}/${SERVICE}
-	chmod 644 ${SERVICEPATH}/${SERVICE}
+${SERVICE}: ${SERVICE}.in
+	sed -e "s,PREFIX,${PREFIX}," $< > $@
+
+install: ${EXECS} ${SERVICE}
+	install -p -s ${EXECS} ${PREFIX}/sbin
+	install -p -m 0664  ${SERVICE} ${SERVICEPATH}
 	systemctl daemon-reload
-	systemctl enable pistackmond
-	systemctl start pistackmond
+	-systemctl enable pistackmond
+	-systemctl start pistackmond
 
 uninstall:
 	systemctl stop pistackmond
 	systemctl disable pistackmond
-	rm ${SERVICEPATH}/${SERVICE}
+	rm -f ${SERVICEPATH}/${SERVICE}
 	systemctl daemon-reload
 	systemctl reset-failed
-	rm /usr/local/sbin/${EXECS} 
-
+	rm -f ${PREFIX}/sbin/${EXECS}
