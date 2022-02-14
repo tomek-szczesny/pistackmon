@@ -76,6 +76,29 @@ sudo make install
 
 That's it!
 
+# Creating a DEB-Package
+
+In case you don't want to have a compiler and source code on your
+production machines, you can create a deb-package on one system and
+install it on multiple other systems.
+
+The recommended procedure is:
+
+    apt-get -y install checkinstall  # if not already installed
+    cd pistackmon/sw
+    make clean                       # in case you don't start from scratch
+    #edit the `makefile` and replace `PREFIX=/usr/local` with `PREFIX=/usr`
+    make rpi4
+    sudo ./make-deb rpi4
+
+This will create a package named `pistackmond-rpi4...deb`.
+
+To install this package, run
+
+    dpkg -i pistackmond-rpi4...deb
+    sudo systemctl start pistackmond.service
+
+
 # Building hardware
 
 This chapter will definitely need some love, but for now just be sure to follow a few guidelines off the top of my head:

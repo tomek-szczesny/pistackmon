@@ -4,7 +4,7 @@ Description=PiStackMon Daemon
 [Service]
 User=root
 
-ExecStart=/usr/local/sbin/pistackmond
+ExecStart=PREFIX/sbin/pistackmond
 
 [Install]
 WantedBy=local-fs.target

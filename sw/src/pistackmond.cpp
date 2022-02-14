@@ -151,9 +151,9 @@ float fetchTemp() {
 	std::ifstream temp_file(temp_file_name);
 
 	if(!temp_file.is_open()) {
-		std::printf("Unable to open %s. Quitting!\n",
+          	std::fprintf(stderr,"Unable to open %s.\n",
 						temp_file_name.c_str());
-		exit(-1);
+		return -1.0;
 	}
 
 	float result;
@@ -188,7 +188,7 @@ repeat:
 
 	std::ifstream cpu_file("/proc/stat");
 	if(!cpu_file.is_open()) {
-		std::printf("Unable to open /proc/stat. Quitting!\n");
+          	std::fprintf(stderr,"Unable to open /proc/stat. Quitting!\n");
 		exit(-1);
 	}
 
@@ -241,7 +241,7 @@ float fetchRam() {
 
 	std::ifstream mem_file("/proc/meminfo");
 	if(!mem_file.is_open()) {
-		std::printf("Unable to open /proc/meminfo. Quitting!\n");
+          	std::fprintf(stderr,"Unable to open /proc/meminfo. Quitting!\n");
 		exit(-1);
 	}
 
@@ -355,6 +355,19 @@ void sendFrame16(std::bitset<16> f) {
 		__sync_synchronize();
 		*(gpiomap+0x117) |= (1 << 4);		// Set pin X.4 (clk) high
 	}
+#elif defined (ODROID_C1)
+	for(int i = 0; i < 16; i++) {
+		__sync_synchronize();
+		*(gpiomap+0x0D) &= ~(1 << (116-97));    // Set pin X.19 (clk) low
+		if(f[15-i]) {				// Set pin Y.8 (data) high
+                  *(gpiomap+0x10) |= (1 << (88-80));
+		}
+		else {					// Set pin Y.8 (data) low
+                  *(gpiomap+0x10) &= ~(1 << (88-80));
+		}
+		__sync_synchronize();
+		*(gpiomap+0x0D) |= (1 << (116-97));	// Set pin X.19 (clk) high
+	}
 #endif
 
 }
@@ -376,6 +389,11 @@ inline void commitFrame() {
 	*(gpiomap+0x117) |= (1 << 7);			// Set pin X.7 (latch) high
 	__sync_synchronize();
 	*(gpiomap+0x117) &= ~(1 << 7);			// Set pin X.7 (latch) low
+#elif defined (ODROID_C1)
+	__sync_synchronize();
+	*(gpiomap+0x0D) |= (1 << (115-97));		// Set pin X.18 (latch) high
+	__sync_synchronize();
+	*(gpiomap+0x0D) &= ~(1 << (115-97));		// Set pin X.18 (latch) low
 #endif
 }
 
@@ -390,6 +408,8 @@ void gpioInit() {
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFE200000);
 #elif defined(ODROID_N2)
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFF634000);
+#elif defined(ODROID_C1)
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC1108000);
 #endif
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
@@ -417,7 +437,11 @@ void gpioInit() {
 	*(gpiomap+0x1B3) &=  (0xF<<3*4);	// Pin X.3
 	*(gpiomap+0x1B3) &=  (0xF<<4*4);	// Pin X.4
 	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
-	
+#elif defined(ODROID_C1)
+	// Set pins as outputs
+	*(gpiomap+0x0F) &= ~(1<<(88-80));	// Pin Y.8
+	*(gpiomap+0x0C) &= ~(1<<(116-97));	// Pin X.19
+	*(gpiomap+0x0C) &= ~(1<<(115-97));	// Pin X.18
 #endif
 	
 }
@@ -440,6 +464,10 @@ void gpioDeinit(bool noclear = false) {
 	*(gpiomap+0x116) |= (1<<3);		// Pin X.3
 	*(gpiomap+0x116) |= (1<<4);		// Pin X.4
 	*(gpiomap+0x116) |= (1<<7);		// Pin X.7
+#elif defined(ODROID_C1)
+	*(gpiomap+0x0F) |= (1<<(88-80));	// Pin Y.8
+	*(gpiomap+0x0C) |= (1<<(116-97));	// Pin X.19
+	*(gpiomap+0x0C) |= (1<<(115-97));	// Pin X.18
 #endif
 
 	//TODO: munmap the gpiomap.
@@ -559,13 +587,16 @@ int main(int argc, char*argv[]) {
 		if (++divCounter >= ref_div) {
 			cpuCache = fetchCpu();
 			ramCache = fetchRam();
-			tempCache = fetchTemp();
+                        if (tempCache >= 0.0) {
+                          // returns -1 if thermal_zone0 is missing
+                          tempCache = fetchTemp();
+                        }
 			divCounter = 0;
 		}	
 
 		cpu = cpuCache;
 		ram = ramCache;
-		temp = tempCache;
+		temp = tempCache < 0.0 ? 0.0:tempCache;
 
 		//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 	
