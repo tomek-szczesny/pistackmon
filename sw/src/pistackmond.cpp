@@ -421,27 +421,40 @@ void gpioInit() {
 	// Set pins as inputs (reset 3-bit pin mode to 000)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
 	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
+	*(gpiomap+2) &= ~(7<<(5*3));	// Pin 25
 	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
 
 	// Set pins as outputs (sets 3-bit pin mode to 001)
 	*(gpiomap+1) |=  (1<<(7*3));	// Pin 17
 	*(gpiomap+2) |=  (1<<(2*3));	// Pin 22
+	*(gpiomap+2) |=  (1<<(5*3));	// Pin 25
 	*(gpiomap+2) |=  (1<<(7*3));	// Pin 27
+
+	__sync_synchronize();
+	*(gpiomap+10) = (1 << 25);	// Set pin 25 (BLANK) low
 #elif defined(ODROID_N2)
 	// Set pins as outputs 
+	*(gpiomap+0x116) &= ~(1<<2);		// Pin X.2
 	*(gpiomap+0x116) &= ~(1<<3);		// Pin X.3
 	*(gpiomap+0x116) &= ~(1<<4);		// Pin X.4
 	*(gpiomap+0x116) &= ~(1<<7);		// Pin X.7
 
 	// Do something with mux (eh? whatever that means)
+	*(gpiomap+0x1B3) &=  (0xF<<2*4);	// Pin X.2
 	*(gpiomap+0x1B3) &=  (0xF<<3*4);	// Pin X.3
 	*(gpiomap+0x1B3) &=  (0xF<<4*4);	// Pin X.4
 	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
+
+	__sync_synchronize();
+	*(gpiomap+0x117) &= ~(1 << 2);		// Set pin X.2 (BLANK) low
 #elif defined(ODROID_C1)
 	// Set pins as outputs
 	*(gpiomap+0x0F) &= ~(1<<(88-80));	// Pin Y.8
 	*(gpiomap+0x0C) &= ~(1<<(116-97));	// Pin X.19
 	*(gpiomap+0x0C) &= ~(1<<(115-97));	// Pin X.18
+	*(gpiomap+0x0C) &= ~(1<<(103-97));	// Pin X.6
+	__sync_synchronize();
+	*(gpiomap+0x0D) &= ~(1 << (103-97));    // Set pin X.6 (BLANK) low
 #endif
 	
 }
@@ -459,8 +472,10 @@ void gpioDeinit(bool noclear = false) {
 #if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
 	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
+	*(gpiomap+2) &= ~(7<<(5*3));	// Pin 25
 	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
 #elif defined(ODROID_N2)
+	*(gpiomap+0x116) |= (1<<2);		// Pin X.2
 	*(gpiomap+0x116) |= (1<<3);		// Pin X.3
 	*(gpiomap+0x116) |= (1<<4);		// Pin X.4
 	*(gpiomap+0x116) |= (1<<7);		// Pin X.7
@@ -468,6 +483,7 @@ void gpioDeinit(bool noclear = false) {
 	*(gpiomap+0x0F) |= (1<<(88-80));	// Pin Y.8
 	*(gpiomap+0x0C) |= (1<<(116-97));	// Pin X.19
 	*(gpiomap+0x0C) |= (1<<(115-97));	// Pin X.18
+	*(gpiomap+0x0C) |= (1<<(103-97));	// Pin X.6
 #endif
 
 	//TODO: munmap the gpiomap.
