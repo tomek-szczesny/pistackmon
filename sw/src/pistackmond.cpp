@@ -73,6 +73,7 @@ const int pwm_res = 6;
 const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
 const std::vector<int> ram_layout = {9, 8, 7, 6, 5};
 const std::vector<int> temp_layout = {11, 10, 12, 13, 14};
+const std::vector<int> user_layout = {15};
 
 // Led intensities adjusted by color 
 // Depending on LED make and model, some colors might appear brighter than others
@@ -80,9 +81,10 @@ const std::vector<int> temp_layout = {11, 10, 12, 13, 14};
 const float led_g = 1;
 const float led_y = 1;
 const float led_r = 1;
+const float led_b = 1;
 const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
-						led_r, led_y, led_g, led_g, led_g,
-						led_g, led_g, led_y, led_r, led_r};
+					led_r, led_y, led_g, led_g, led_g,
+					led_g, led_g, led_y, led_r, led_r,led_b};
 
 // Gamma correction for LEDs
 // It is not the proper way to linearize the LED response, but close enough
@@ -96,6 +98,7 @@ const float led_gamma = 2.8;
 floatLP cpu(0.5, refresh_rate);
 floatLP ram(0.5, refresh_rate);
 floatLP temp(0.5, refresh_rate);
+floatLP user(0.5, refresh_rate);
 
 // pwm_data contains data for PWM() thread to work on
 // Each vector item contains 16 bits to be passed to LED driver.
@@ -267,6 +270,11 @@ float fetchRam() {
 	return result;
 }
 
+inline float fetchUser() {
+	// currently we return a const-value
+	return 1.0;
+}
+
 // ================================ LED DRIVING ================================
 
 std::vector<float> led_pwms() {
@@ -301,6 +309,7 @@ std::vector<float> led_pwms() {
 		}
 	}
 
+	output[user_layout[0]] = std::pow(user.f(),led_gamma);
 	for (int i=0; i<16; i++) output[i] *= led_pwm_multipliers[i];
 
 	return output;
@@ -461,6 +470,29 @@ void gpioInit() {
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
+void ledInit() {
+	// clear all LEDs and configure BLANK-pin
+	sendFrame16(0);
+	commitFrame();
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
+	*(gpiomap+2) &= ~(7<<(5*3));	// Pin 25
+	*(gpiomap+2) |=  (1<<(5*3));	// Pin 25
+	__sync_synchronize();
+	*(gpiomap+10) = (1 << 25);	// Set pin 25 (BLANK) low
+#elif defined(ODROID_N2)
+	*(gpiomap+0x116) &= ~(1<<2);		// Pin X.2
+	*(gpiomap+0x1B3) &=  (0xF<<2*4);	// Pin X.2
+	__sync_synchronize();
+	*(gpiomap+0x117) &= ~(1 << 2);		// Set pin X.2 (BLANK) low
+#elif defined(ODROID_C1)
+	*(gpiomap+0x0C) &= ~(1<<(103-97));	// Pin X.6
+	__sync_synchronize();
+	*(gpiomap+0x0D) &= ~(1 << (103-97));    // Set pin X.6 (BLANK) low
+#endif
+}
+
+//  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+
 void gpioDeinit(bool noclear = false) {
 
 	if (!noclear) {
@@ -501,6 +533,7 @@ void PWM() {
 	pwm_data_datatype local_pwm_data;
 
 	gpioInit();
+	ledInit();
 
 	// Compute PWM periods for each bit
 	// Every more significant bit gets twice the time of the previous one
@@ -593,6 +626,7 @@ int main(int argc, char*argv[]) {
 	pthread_setschedparam(pwm_thread.native_handle(), SCHED_FIFO, &sch);
 
 
+	float userCache = 0;
 	float cpuCache = 0;
 	float ramCache = 0;
 	float tempCache = 0;
@@ -601,6 +635,7 @@ int main(int argc, char*argv[]) {
 	while (!main_closing) {
 
 		if (++divCounter >= ref_div) {
+			userCache = fetchUser();
 			cpuCache = fetchCpu();
 			ramCache = fetchRam();
                         if (tempCache >= 0.0) {
@@ -610,6 +645,7 @@ int main(int argc, char*argv[]) {
 			divCounter = 0;
 		}	
 
+		user = userCache;
 		cpu = cpuCache;
 		ram = ramCache;
 		temp = tempCache < 0.0 ? 0.0:tempCache;
