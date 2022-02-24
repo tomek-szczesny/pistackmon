@@ -98,7 +98,7 @@ const float led_gamma = 2.8;
 floatLP cpu(0.5, refresh_rate);
 floatLP ram(0.5, refresh_rate);
 floatLP temp(0.5, refresh_rate);
-floatLP user(0.5, refresh_rate);
+float   user;
 
 // pwm_data contains data for PWM() thread to work on
 // Each vector item contains 16 bits to be passed to LED driver.
@@ -309,7 +309,7 @@ std::vector<float> led_pwms() {
 		}
 	}
 
-	output[user_layout[0]] = std::pow(user.f(),led_gamma);
+	output[user_layout[0]] = std::pow(user,led_gamma);
 	for (int i=0; i<16; i++) output[i] *= led_pwm_multipliers[i];
 
 	return output;
