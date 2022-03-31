@@ -368,6 +368,19 @@ void sendFrame16(std::bitset<16> f) {
 		__sync_synchronize();
 		*(gpiomap+0x0D) |= (1 << (116-97));	// Set pin X.19 (clk) high
 	}
+#elif defined (ODROID_C2)
+	for(int i = 0; i < 16; i++) {
+		__sync_synchronize();
+		*(gpiomap+0x119) &= ~(1 << 11);    	// Set pin X.11 (clk) low
+		if(f[15-i]) {				// Set pin X.19 (data) high
+                  *(gpiomap+0x119) |= (1 << 19);
+		}
+		else {					// Set pin X.19 (data) low
+                  *(gpiomap+0x119) &= ~(1 << 19);
+		}
+		__sync_synchronize();
+		*(gpiomap+0x119) |= (1 << 11);		// Set pin X.11 (clk) high
+	}
 #endif
 
 }
@@ -379,21 +392,23 @@ inline void commitFrame() {
 	// Thus applying whatever has been previously sent to it
 	// Keeping these separated helps synchronise PWM more precisely
 
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	__sync_synchronize();
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	*(gpiomap+7) = (1 << 22);			// Set pin 22 (latch) high
 	__sync_synchronize();
 	*(gpiomap+10) = (1 << 22);			// Set pin 22 (latch) low
 #elif defined (ODROID_N2)
-	__sync_synchronize();
 	*(gpiomap+0x117) |= (1 << 7);			// Set pin X.7 (latch) high
 	__sync_synchronize();
 	*(gpiomap+0x117) &= ~(1 << 7);			// Set pin X.7 (latch) low
 #elif defined (ODROID_C1)
+	*(gpiomap+0x0D) |= (1 << 18);		// Set pin X.18 (latch) high
 	__sync_synchronize();
-	*(gpiomap+0x0D) |= (1 << (115-97));		// Set pin X.18 (latch) high
+	*(gpiomap+0x0D) &= ~(1 << 18);		// Set pin X.18 (latch) low
+#elif defined (ODROID_C2)
+	*(gpiomap+0x119) |= (1 << 9);		// Set pin X.9 (latch) high
 	__sync_synchronize();
-	*(gpiomap+0x0D) &= ~(1 << (115-97));		// Set pin X.18 (latch) low
+	*(gpiomap+0x119) &= ~(1 << 9);		// Set pin X.9 (latch) low
 #endif
 }
 
@@ -410,6 +425,8 @@ void gpioInit() {
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFF634000);
 #elif defined(ODROID_C1)
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC1108000);
+#elif defined(ODROID_C2)
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC8834000);
 #endif
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
@@ -419,14 +436,14 @@ void gpioInit() {
 
 #if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	// Set pins as inputs (reset 3-bit pin mode to 000)
-	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
-	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
-	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
+	*(gpiomap+1) &= ~(7<<(7*3));		// Pin 17
+	*(gpiomap+2) &= ~(7<<(2*3));		// Pin 22
+	*(gpiomap+2) &= ~(7<<(7*3));		// Pin 27
 
 	// Set pins as outputs (sets 3-bit pin mode to 001)
-	*(gpiomap+1) |=  (1<<(7*3));	// Pin 17
-	*(gpiomap+2) |=  (1<<(2*3));	// Pin 22
-	*(gpiomap+2) |=  (1<<(7*3));	// Pin 27
+	*(gpiomap+1) |=  (1<<(7*3));		// Pin 17
+	*(gpiomap+2) |=  (1<<(2*3));		// Pin 22
+	*(gpiomap+2) |=  (1<<(7*3));		// Pin 27
 #elif defined(ODROID_N2)
 	// Set pins as outputs 
 	*(gpiomap+0x116) &= ~(1<<3);		// Pin X.3
@@ -439,9 +456,14 @@ void gpioInit() {
 	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
 #elif defined(ODROID_C1)
 	// Set pins as outputs
-	*(gpiomap+0x0F) &= ~(1<<(88-80));	// Pin Y.8
-	*(gpiomap+0x0C) &= ~(1<<(116-97));	// Pin X.19
-	*(gpiomap+0x0C) &= ~(1<<(115-97));	// Pin X.18
+	*(gpiomap+0x0F) &= ~(1<<8);		// Pin Y.8
+	*(gpiomap+0x0C) &= ~(1<<19);		// Pin X.19
+	*(gpiomap+0x0C) &= ~(1<<18);		// Pin X.18
+#elif defined(ODROID_C2)
+	// Set pins as outputs
+	*(gpiomap+0x118) &= ~(1<<19);		// Pin X.19
+	*(gpiomap+0x118) &= ~(1<<11);		// Pin X.11
+	*(gpiomap+0x118) &= ~(1<<9);		// Pin X.9
 #endif
 	
 }
@@ -465,9 +487,13 @@ void gpioDeinit(bool noclear = false) {
 	*(gpiomap+0x116) |= (1<<4);		// Pin X.4
 	*(gpiomap+0x116) |= (1<<7);		// Pin X.7
 #elif defined(ODROID_C1)
-	*(gpiomap+0x0F) |= (1<<(88-80));	// Pin Y.8
-	*(gpiomap+0x0C) |= (1<<(116-97));	// Pin X.19
-	*(gpiomap+0x0C) |= (1<<(115-97));	// Pin X.18
+	*(gpiomap+0x0F) |= (1<<(8));		// Pin Y.8
+	*(gpiomap+0x0C) |= (1<<(19));		// Pin X.19
+	*(gpiomap+0x0C) |= (1<<(18));		// Pin X.18
+#elif defined(ODROID_C2)
+	*(gpiomap+0x118) |= (1<<(19));		// Pin X.19
+	*(gpiomap+0x118) |= (1<<(11));		// Pin X.11
+	*(gpiomap+0x118) |= (1<<(9));		// Pin X.9
 #endif
 
 	//TODO: munmap the gpiomap.

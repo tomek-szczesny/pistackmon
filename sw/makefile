@@ -16,6 +16,7 @@ none:
 	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
 	@echo "make n2             - builds a Odroid N2 version of pistackmond"
 	@echo "make c1             - builds a Odroid C1(+) version of pistackmond"
+	@echo "make c2             - builds a Odroid C2 version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
 	@echo "sudo make uninstall - removes pistackmond"
@@ -31,6 +32,9 @@ n2:
 
 c1:
 	${MAKE} $(EXECS) PLATFORM=ODROID_C1
+
+c2:
+	${MAKE} $(EXECS) PLATFORM=ODROID_C2
 
 ${EXECS}: src/pistackmond.cpp
 	${GCC} ${LIBS} ${GCCFLAGS} -D=${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
