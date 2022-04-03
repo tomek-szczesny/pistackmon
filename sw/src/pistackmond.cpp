@@ -88,6 +88,11 @@ const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_
 // It is not the proper way to linearize the LED response, but close enough
 const float led_gamma = 2.8;
 
+// Other consts
+#ifdef defined(ODROID_M1)
+const uint g3 = 0xFE760000 - 0xFDD60000; // Extra offset for reaching GPIO bank 3
+#endif
+
 //================================== GLOBALS ===================================
 
 // Variables holding measurement results
@@ -139,6 +144,19 @@ std::vector<long int> getIntsFromLine(std::string s) {
 	}
 	return output;
 }
+
+// A special function for accessing RockChip's GPIOs - "it's complicated"...
+// It requires simultaneous write to two bits for whatever reason.
+// Perhaps future release of full datasheet would explain this.
+#ifdef defined(ODROID_M1)
+void rk_gpio(int offset, int bit, bool val) {
+	uint32_t buf = *(gpiomap + offset);
+	buf |= (1 << (pin + 16));		// <- this thing - what is that?
+	if (val) buf |=  (1 << bit);
+	else     buf &= ~(1 << bit);
+	*(gpiomap + offset) = buf;
+}
+#endif
 
 //================================ DATA SOURCES ================================
 
@@ -381,6 +399,19 @@ void sendFrame16(std::bitset<16> f) {
 		__sync_synchronize();
 		*(gpiomap+0x119) |= (1 << 11);		// Set pin X.11 (clk) high
 	}
+#elif defined (ODROID_M1)
+	for(int i = 0; i < 16; i++) {
+		__sync_synchronize();
+		rk_gpio(     0x01,  1, 0);	// Set pin 0C.1 (clk ) low
+		if(f[15-i]) {				// Set pin X.19 (data) high
+			rk_gpio(0x01,  0, 1);	// Set pin 0C.0 (data) high
+		}
+		else {					// Set pin X.19 (data) low
+			rk_gpio(0x01,  0, 0);	// Set pin 0C.0 (data) low
+		}
+		__sync_synchronize();
+		rk_gpio(     0x01,  1, 1);	// Set pin 0C.1 (clk ) high
+	}
 #endif
 
 }
@@ -409,6 +440,10 @@ inline void commitFrame() {
 	*(gpiomap+0x119) |= (1 << 9);		// Set pin X.9 (latch) high
 	__sync_synchronize();
 	*(gpiomap+0x119) &= ~(1 << 9);		// Set pin X.9 (latch) low
+#elif defined (ODROID_M1)
+	rk_gpio( g3      , 10, 1);		// Set pin 3B.2 (latch) high
+	__sync_synchronize();
+	rk_gpio( g3      , 10, 0);		// Set pin 3B.2 (latch) low
 #endif
 }
 
@@ -427,6 +462,8 @@ void gpioInit() {
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC1108000);
 #elif defined(ODROID_C2)
 	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC8834000);
+#elif defined(ODROID_M1)
+	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFDD60000);
 #endif
 	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
 	close(gpiomem);
@@ -464,6 +501,12 @@ void gpioInit() {
 	*(gpiomap+0x118) &= ~(1<<19);		// Pin X.19
 	*(gpiomap+0x118) &= ~(1<<11);		// Pin X.11
 	*(gpiomap+0x118) &= ~(1<<9);		// Pin X.9
+#elif defined(ODROID_M1)
+	// Set pins as outputs
+	rk_gpio(     0x02 + 0x01,  0, 1);	// Pin 0C.0
+	rk_gpio(     0x02 + 0x01,  1, 1);	// Pin 0C.1
+	rk_gpio(g3 + 0x02       , 10, 1);	// Pin 3B.2
+//	rk_gpio(g3 + 0x02 + 0x01,  9, 1);	// Pin 3D.1
 #endif
 	
 }
@@ -494,6 +537,11 @@ void gpioDeinit(bool noclear = false) {
 	*(gpiomap+0x118) |= (1<<(19));		// Pin X.19
 	*(gpiomap+0x118) |= (1<<(11));		// Pin X.11
 	*(gpiomap+0x118) |= (1<<(9));		// Pin X.9
+#elif defined(ODROID_M1)
+	rk_gpio(     0x02 + 0x01,  0, 0);	// Pin 0C.0
+	rk_gpio(     0x02 + 0x01,  1, 0);	// Pin 0C.1
+	rk_gpio(g3 + 0x02       , 10, 0);	// Pin 3B.2
+//	rk_gpio(g3 + 0x02 + 0x01,  9, 0);	// Pin 3D.1
 #endif
 
 	//TODO: munmap the gpiomap.
