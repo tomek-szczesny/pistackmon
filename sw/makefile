@@ -5,7 +5,12 @@ GCC?=g++
 SRC=src/pistackmond.cpp
 LIBS=-pthread
 LDLIBS=
-GCCFLAGS=-Wall -Wextra -g -std=gnu++17 -O3
+
+DEBUG=off
+GCCFLAGS_off=-w -O3
+GCCFLAGS_on=-Wall -Wextra -g -Og
+GCCFLAGS=-fcompare-debug-second -std=gnu++17 ${GCCFLAGS_${DEBUG}}
+
 SERVICE=pistackmond.service
 SERVICEPATH=/etc/systemd/system
 
