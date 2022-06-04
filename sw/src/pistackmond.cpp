@@ -454,6 +454,7 @@ inline void commitFrame() {
 	__sync_synchronize();
 	rk_gpio(1, 0, 10, 0);			// Set pin 3B.2 (latch) low
 #endif
+	__sync_synchronize();
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
@@ -494,9 +495,7 @@ void gpioInit() {
 	*(gpiomap+2) |=  (1<<(2*3));		// Pin 22
 	*(gpiomap+2) |=  (1<<(5*3));    	// Pin 25
 	*(gpiomap+2) |=  (1<<(7*3));		// Pin 27
-
 	__sync_synchronize();
-	*(gpiomap+10) = (1 << 25);      	// Set pin 25 (BLANK) low
 #elif defined(ODROID_N2)
 	// Set pins as outputs 
 	*(gpiomap+0x116) &= ~(1<<2);		// Pin X.2
@@ -509,9 +508,7 @@ void gpioInit() {
 	*(gpiomap+0x1B3) &=  (0xF<<3*4);	// Pin X.3
 	*(gpiomap+0x1B3) &=  (0xF<<4*4);	// Pin X.4
 	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
-
 	__sync_synchronize();
-	*(gpiomap+0x117) &= ~(1 << 2);		// Set pin X.2 (BLANK) low
 #elif defined(ODROID_C1)
 	// Set pins as outputs
 	*(gpiomap+0x0F) &= ~(1<<8);		// Pin Y.8
@@ -519,47 +516,55 @@ void gpioInit() {
 	*(gpiomap+0x0C) &= ~(1<<18);		// Pin X.18
 	*(gpiomap+0x0C) &= ~(1<<6);	        // Pin X.6
 	__sync_synchronize();
-	*(gpiomap+0x0D) &= ~(1<<6);             // Set pin X.6 (BLANK) low
 #elif defined(ODROID_C2)
 	// Set pins as outputs
 	*(gpiomap+0x118) &= ~(1<<19);		// Pin X.19
 	*(gpiomap+0x118) &= ~(1<<11);		// Pin X.11
 	*(gpiomap+0x118) &= ~(1<<9);		// Pin X.9
 	// TODO: define and configure BLANK
-	//__sync_synchronize();
+	__sync_synchronize();
 #elif defined(ODROID_M1)
 	// Set pins as outputs
 	rk_gpio(0, 0x02 + 0x01,  0, 1);		// Pin 0C.0
 	rk_gpio(0, 0x02 + 0x01,  1, 1);		// Pin 0C.1
 	rk_gpio(1, 0x02       , 10, 1);		// Pin 3B.2
-//	rk_gpio(1, 0x02 + 0x01,  9, 1);		// Pin 3D.1
-	// TODO: define and configure BLANK
-	//__sync_synchronize();
+	rk_gpio(1, 0x02 + 0x01,  9, 1);		// Pin 3D.1
 #endif
-	
+
+	// clear all LEDs
+	sendFrame16(0);
+	commitFrame();
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
-void ledInit() {
-	// clear all LEDs and configure BLANK-pin
-	sendFrame16(0);
-	commitFrame();
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-	*(gpiomap+2) &= ~(7<<(5*3));	// Pin 25
-	*(gpiomap+2) |=  (1<<(5*3));	// Pin 25
-	__sync_synchronize();
-	*(gpiomap+10) = (1 << 25);	// Set pin 25 (BLANK) low
-#elif defined(ODROID_N2)
-	*(gpiomap+0x116) &= ~(1<<2);		// Pin X.2
-	*(gpiomap+0x1B3) &=  (0xF<<2*4);	// Pin X.2
-	__sync_synchronize();
-	*(gpiomap+0x117) &= ~(1 << 2);		// Set pin X.2 (BLANK) low
-#elif defined(ODROID_C1)
-	*(gpiomap+0x0C) &= ~(1<<(103-97));	// Pin X.6
-	__sync_synchronize();
-	*(gpiomap+0x0D) &= ~(1 << (103-97));    // Set pin X.6 (BLANK) low
+void setLedState(bool state = true) {
+#if defined CLASSIC
+	return;
 #endif
+	__sync_synchronize();
+	if (state) {
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
+		*(gpiomap+10) = (1 << 25);	   // Set pin 25 (BLANK) low
+#elif defined(ODROID_N2)
+		*(gpiomap+0x117) &= ~(1 << 2);	   // Set pin X.2 (BLANK) low
+#elif defined(ODROID_C1)
+		*(gpiomap+0x0D) &= ~(1 << 6);      // Set pin X.6 (BLANK) low
+#elif defined(ODROID_M1)
+	rk_gpio(1, 0, 9, 0);		           // Set pin 3D.1 (BLANK) low
+#endif
+        } else {
+#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
+		*(gpiomap+7) = (1 << 25);	   // Set pin 25 (BLANK) high
+#elif defined(ODROID_N2)
+		*(gpiomap+0x117) |= (1 << 2);	   // Set pin X.2 (BLANK) high
+#elif defined(ODROID_C1)
+		*(gpiomap+0x0D)  |= (1 << 6);      // Set pin X.6 (BLANK) high
+#elif defined(ODROID_M1)
+		rk_gpio(1, 0, 9, 1);		   // Set pin 3D.1 (BLANK) high
+#endif
+        }
+	__sync_synchronize();
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
@@ -596,9 +601,9 @@ void gpioDeinit(bool noclear = false) {
 	rk_gpio(0, 0x02 + 0x01,  0, 0);		// Pin 0C.0
 	rk_gpio(0, 0x02 + 0x01,  1, 0);		// Pin 0C.1
 	rk_gpio(1, 0x02       , 10, 0);		// Pin 3B.2
-//	rk_gpio(1, 0x02 + 0x01,  9, 0);		// Pin 3D.1
-        // TODO: deinit BLANK pin
+	rk_gpio(1, 0x02 + 0x01,  9, 0);		// Pin 3D.1
 #endif
+	__sync_synchronize();
 
 	//TODO: munmap the gpiomap.
 }
@@ -615,7 +620,7 @@ void PWM() {
 	pwm_data_datatype local_pwm_data;
 
 	gpioInit();
-	ledInit();
+	setLedState(true);
 
 	// Compute PWM periods for each bit
 	// Every more significant bit gets twice the time of the previous one
@@ -681,13 +686,13 @@ int main(int argc, char*argv[]) {
 			gpioInit();
 			sendFrame16(-1);	// Dirty "all ones" hack
 			commitFrame();
+                        setLedState(true);
 			gpioDeinit(1);
 			exit(0);
 		}
 		if (argument == "alloff") {
 			gpioInit();
-			sendFrame16(0);
-			commitFrame();
+                        setLedState(true);
 			gpioDeinit(1);
 			exit(0);
 		}
