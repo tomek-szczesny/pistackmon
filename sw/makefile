@@ -1,3 +1,9 @@
+PCB=LITE
+DEBUG=off
+GCCFLAGS_off=-w -O3
+GCCFLAGS_on=-Wall -Wextra -g -Og
+GCCFLAGS=-fcompare-debug-second -std=gnu++17 ${GCCFLAGS_${DEBUG}}
+
 SHELL=/bin/bash
 PREFIX=/usr/local
 EXECS=pistackmond
@@ -5,11 +11,6 @@ GCC?=g++
 SRC=src/pistackmond.cpp
 LIBS=-pthread
 LDLIBS=
-
-DEBUG=off
-GCCFLAGS_off=-w -O3
-GCCFLAGS_on=-Wall -Wextra -g -Og
-GCCFLAGS=-fcompare-debug-second -std=gnu++17 ${GCCFLAGS_${DEBUG}}
 
 SERVICE=pistackmond.service
 SERVICEPATH=/etc/systemd/system
@@ -46,7 +47,7 @@ m1:
 	${MAKE} $(EXECS) PLATFORM=ODROID_M1
 
 ${EXECS}: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D=${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
+	${GCC} ${LIBS} ${GCCFLAGS} -D${PCB} -D${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
 
 clean:
 	rm -f ${EXECS} ${SERVICE}
