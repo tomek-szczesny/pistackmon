@@ -22,13 +22,16 @@ extern volatile uint32_t * gpiomap;
 
 void gpioInitImpl();
 void gpioDeinitImpl();
+void rk_gpio(bool g3, int offset, int bit, bool val);
 
 inline void gpioSet(uint8_t pin) {
-  //	rk_gpio(1,0,PIN_OFF-pin,1); // Set pin high
+	if (pin < 96) 	rk_gpio(0,  pin     / 16,  pin     % 16, 1);
+	else 		rk_gpio(1, (pin-96) / 16, (pin-96) % 16, 1);
 }
 
 inline void gpioClear(uint8_t pin) {
-  //	rk_gpio(1,0,PIN_OFF-pin,0); // Set pin high
+	if (pin < 96) 	rk_gpio(0,  pin     / 16,  pin     % 16, 0);
+	else 		rk_gpio(1, (pin-96) / 16, (pin-96) % 16, 0);
 }
 
 #endif

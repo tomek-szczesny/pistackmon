@@ -15,19 +15,6 @@
 
 #include "gpio_M1.h"
 
-// A special function for accessing RockChip's GPIOs - "it's complicated"...
-// It requires simultaneous write to two bits for whatever reason.
-// Perhaps future release of full datasheet would explain this.
-
-void rk_gpio(bool g3, int offset, int bit, bool val) {
-	volatile uint32_t * gm = g3 ? gpiomap3 : gpiomap;
-	uint32_t buf = *(gm + offset);
-	buf |= (1 << (bit + 16));		// <- this thing - what is that?
-	if (val) buf |=  (1 << bit);
-	else     buf &= ~(1 << bit);
-	*(gm + offset) = buf;
-}
-
 
 // Map of a part of memory that provides access to GPIO registers
 volatile uint32_t *gpiomap;
@@ -56,3 +43,17 @@ void gpioDeinitImpl() {
 	rk_gpio(1, 0x02 + 0x01,  9, 0);         // Pin 3D.1
 	__sync_synchronize();
 }
+
+// A special function for accessing RockChip's GPIOs - "it's complicated"...
+// It requires simultaneous write to two bits for whatever reason.
+// Perhaps future release of full datasheet would explain this.
+
+void rk_gpio(bool g3, int offset, int bit, bool val) {
+	volatile uint32_t * gm = g3 ? gpiomap3 : gpiomap;
+	uint32_t buf = *(gm + offset);
+	buf |= (1 << (bit + 16));		// <- this thing - what is that?
+	if (val) buf |=  (1 << bit);
+	else     buf &= ~(1 << bit);
+	*(gm + offset) = buf;
+}
+
