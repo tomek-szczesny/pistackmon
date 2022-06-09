@@ -1,16 +1,17 @@
+# -------------------------------------------------------------------------
+# Toplevel makefile for pistackmon
+#
+# Website: https://github.com/tomek-szczesny/pistackmon
+# Authors: Tomek Szczesny, Bernhard Bablok
+# License: GPL3
+# -------------------------------------------------------------------------
+
 PCB=LITE
 DEBUG=off
-GCCFLAGS_off=-w -O3
-GCCFLAGS_on=-Wall -Wextra -g -Og
-GCCFLAGS=-fcompare-debug-second -std=gnu++17 ${GCCFLAGS_${DEBUG}}
 
 SHELL=/bin/bash
 PREFIX=/usr/local
 EXECS=pistackmond
-GCC?=g++
-SRC=src/pistackmond.cpp
-LIBS=-pthread
-LDLIBS=
 
 SERVICE=pistackmond.service
 SERVICEPATH=/etc/systemd/system
@@ -29,34 +30,32 @@ none:
 	@echo "sudo make uninstall - removes pistackmond"
 
 rpi3:
-	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI3
+	${MAKE} -C src $(EXECS) PLATFORM=PI3
 
 rpi4:
-	${MAKE} $(EXECS) PLATFORM=RASPBERRY_PI4
+	${MAKE} -C src $(EXECS) PLATFORM=PI4
 
 n2:
-	${MAKE} $(EXECS) PLATFORM=ODROID_N2
+	${MAKE} -C src $(EXECS) PLATFORM=N2
 
 c1:
-	${MAKE} $(EXECS) PLATFORM=ODROID_C1
+	${MAKE} -C src $(EXECS) PLATFORM=C1
 
 c2:
-	${MAKE} $(EXECS) PLATFORM=ODROID_C2
+	${MAKE} -C src $(EXECS) PLATFORM=C2
 
 m1:
-	${MAKE} $(EXECS) PLATFORM=ODROID_M1
-
-${EXECS}: src/pistackmond.cpp
-	${GCC} ${LIBS} ${GCCFLAGS} -D${PCB} -D${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
+	${MAKE} -C src $(EXECS) PLATFORM=M1
 
 clean:
-	rm -f ${EXECS} ${SERVICE}
+	${MAKE} -C src clean
+	rm -f ${SERVICE}
 
 ${SERVICE}: ${SERVICE}.in
 	sed -e "s,PREFIX,${PREFIX}," $< > $@
 
-install: ${EXECS} ${SERVICE}
-	install -p -s ${EXECS} ${PREFIX}/sbin
+install: ${SERVICE}
+	${MAKE} -C src install
 	install -p -m 0664  ${SERVICE} ${SERVICEPATH}
 	systemctl daemon-reload
 	-systemctl enable pistackmond
@@ -68,4 +67,4 @@ uninstall:
 	rm -f ${SERVICEPATH}/${SERVICE}
 	systemctl daemon-reload
 	systemctl reset-failed
-	rm -f ${PREFIX}/sbin/${EXECS}
+	${MAKE} -C src uninstall
