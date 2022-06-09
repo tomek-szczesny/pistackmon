@@ -1,3 +1,11 @@
+// -------------------------------------------------------------------------
+// Main application pistackmond
+//
+// Website: https://github.com/tomek-szczesny/pistackmon
+// Authors: Tomek Szczesny, Bernhard Bablok
+// License: GPL3
+// -------------------------------------------------------------------------
+
 #include <bitset>
 #include <chrono>
 #include <cmath>
@@ -9,10 +17,11 @@
 #include <thread>
 #include <vector>
 
-#include <sys/mman.h>	// mmap()
 #include <fcntl.h>	// open()
 #include <unistd.h>	// close()
 #include <pthread.h>	// pthread_setschedparam()
+
+#include "gpio.h"       // this is a makefile-generated file (link)
 
 using namespace std::chrono_literals;
 
@@ -110,12 +119,6 @@ typedef std::vector<std::bitset<16>> pwm_data_datatype;
 pwm_data_datatype pwm_data;
 std::mutex pwm_data_mutex;
 
-// Map of a part of memory that provides access to GPIO registers
-volatile uint32_t * gpiomap;
-#if defined(ODROID_M1)
-volatile uint32_t * gpiomap3; // Extra map for reaching GPIO bank 3 in Odroid M1
-#endif
-
 // Precalculated PWM periods
 // To be filled by PWM thread
 std::vector<std::chrono::microseconds> pwm_periods;
@@ -146,20 +149,6 @@ std::vector<long int> getIntsFromLine(std::string s) {
 	}
 	return output;
 }
-
-// A special function for accessing RockChip's GPIOs - "it's complicated"...
-// It requires simultaneous write to two bits for whatever reason.
-// Perhaps future release of full datasheet would explain this.
-#if defined(ODROID_M1)
-void rk_gpio(bool g3, int offset, int bit, bool val) {
-	volatile uint32_t * gm = g3 ? gpiomap3 : gpiomap;
-	uint32_t buf = *(gm + offset);
-	buf |= (1 << (bit + 16));		// <- this thing - what is that?
-	if (val) buf |=  (1 << bit);
-	else     buf &= ~(1 << bit);
-	*(gm + offset) = buf;
-}
-#endif
 
 //================================ DATA SOURCES ================================
 
@@ -360,69 +349,17 @@ pwm_data_datatype format_pwms(std::vector<float> pwms) {
 
 void sendFrame16(std::bitset<16> f) {
 	// Sends data to LED driver chip but does not latch it
-
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
 	for(int i = 0; i < 16; i++) {
 		__sync_synchronize();
-		*(gpiomap+10) = (1 << 27);		// Set pin 27 (clk) low
-		*(gpiomap+(f[15-i]?7:10)) = (1 << 17);	// Set pin 17 (data) to value f[15-i])
+		gpioClear(PIN_CLK);
+		if (f[15-i]) {
+                	gpioSet(PIN_DATA);
+		} else {
+                	gpioClear(PIN_DATA);
+		}
 		__sync_synchronize();
-		*(gpiomap+7) = (1 << 27);		// Set pin 27 (clk) high
+		gpioSet(PIN_CLK);
 	}
-#elif defined (ODROID_N2)
-	for(int i = 0; i < 16; i++) {
-		__sync_synchronize();
-		*(gpiomap+0x117) &= ~(1 << 4);		// Set pin X.4 (clk) low
-		if(f[15-i]) {				// Set pin X.3 (data) high
-			*(gpiomap+0x117) |= (1 << 3);
-		}
-		else {					// Set pin X.3 (data) low
-			*(gpiomap+0x117) &= ~(1 << 3);
-		}
-		__sync_synchronize();
-		*(gpiomap+0x117) |= (1 << 4);		// Set pin X.4 (clk) high
-	}
-#elif defined (ODROID_C1)
-	for(int i = 0; i < 16; i++) {
-		__sync_synchronize();
-		*(gpiomap+0x0D) &= ~(1 << (116-97));    // Set pin X.19 (clk) low
-		if(f[15-i]) {				// Set pin Y.8 (data) high
-                  *(gpiomap+0x10) |= (1 << (88-80));
-		}
-		else {					// Set pin Y.8 (data) low
-                  *(gpiomap+0x10) &= ~(1 << (88-80));
-		}
-		__sync_synchronize();
-		*(gpiomap+0x0D) |= (1 << (116-97));	// Set pin X.19 (clk) high
-	}
-#elif defined (ODROID_C2)
-	for(int i = 0; i < 16; i++) {
-		__sync_synchronize();
-		*(gpiomap+0x119) &= ~(1 << 11);    	// Set pin X.11 (clk) low
-		if(f[15-i]) {				// Set pin X.19 (data) high
-                  *(gpiomap+0x119) |= (1 << 19);
-		}
-		else {					// Set pin X.19 (data) low
-                  *(gpiomap+0x119) &= ~(1 << 19);
-		}
-		__sync_synchronize();
-		*(gpiomap+0x119) |= (1 << 11);		// Set pin X.11 (clk) high
-	}
-#elif defined (ODROID_M1)
-	for(int i = 0; i < 16; i++) {
-		__sync_synchronize();
-		rk_gpio(0, 0x01,  1, 0);	// Set pin 0C.1 (clk ) low
-		if(f[15-i]) {
-			rk_gpio(0, 0x01,  0, 1);	// Set pin 0C.0 (data) high
-		}
-		else {
-			rk_gpio(0, 0x01,  0, 0);	// Set pin 0C.0 (data) low
-		}
-		__sync_synchronize();
-		rk_gpio(0, 0x01,  1, 1);	// Set pin 0C.1 (clk ) high
-	}
-#endif
-
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
@@ -433,106 +370,17 @@ inline void commitFrame() {
 	// Keeping these separated helps synchronise PWM more precisely
 
 	__sync_synchronize();
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-	*(gpiomap+7) = (1 << 22);			// Set pin 22 (latch) high
+	gpioSet(PIN_LATCH);
 	__sync_synchronize();
-	*(gpiomap+10) = (1 << 22);			// Set pin 22 (latch) low
-#elif defined (ODROID_N2)
-	*(gpiomap+0x117) |= (1 << 7);			// Set pin X.7 (latch) high
-	__sync_synchronize();
-	*(gpiomap+0x117) &= ~(1 << 7);			// Set pin X.7 (latch) low
-#elif defined (ODROID_C1)
-	*(gpiomap+0x0D) |= (1 << 18);		// Set pin X.18 (latch) high
-	__sync_synchronize();
-	*(gpiomap+0x0D) &= ~(1 << 18);		// Set pin X.18 (latch) low
-#elif defined (ODROID_C2)
-	*(gpiomap+0x119) |= (1 << 9);		// Set pin X.9 (latch) high
-	__sync_synchronize();
-	*(gpiomap+0x119) &= ~(1 << 9);		// Set pin X.9 (latch) low
-#elif defined (ODROID_M1)
-	rk_gpio(1, 0, 10, 1);			// Set pin 3B.2 (latch) high
-	__sync_synchronize();
-	rk_gpio(1, 0, 10, 0);			// Set pin 3B.2 (latch) low
-#endif
+	gpioClear(PIN_LATCH);
 	__sync_synchronize();
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
 void gpioInit() {
-
-	int gpiomem = open("/dev/mem", O_RDWR|O_SYNC);
-#ifdef RASPBERRY_PI3
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0x3F200000);
-#elif defined(RASPBERRY_PI4)
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFE200000);
-#elif defined(ODROID_N2)
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFF634000);
-#elif defined(ODROID_C1)
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC1108000);
-#elif defined(ODROID_C2)
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xC8834000);
-#elif defined(ODROID_M1)
-	void * map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFE760000);
-	gpiomap3 = reinterpret_cast<volatile uint32_t *> (map);
-	map = mmap(NULL, 4096, (PROT_READ | PROT_WRITE), MAP_SHARED, gpiomem, 0xFDD60000);
-#endif
-	gpiomap = reinterpret_cast<volatile uint32_t *> (map);
-	close(gpiomem);
-
-	// TODO: The following code will segfault if not run as root.
-	// Let the user know what is wrong!
-
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-	// Set pins as inputs (reset 3-bit pin mode to 000)
-	*(gpiomap+1) &= ~(7<<(7*3));		// Pin 17
-	*(gpiomap+2) &= ~(7<<(2*3));		// Pin 22
-	*(gpiomap+2) &= ~(7<<(5*3));	        // Pin 25
-	*(gpiomap+2) &= ~(7<<(7*3));		// Pin 27
-
-	// Set pins as outputs (sets 3-bit pin mode to 001)
-	*(gpiomap+1) |=  (1<<(7*3));		// Pin 17
-	*(gpiomap+2) |=  (1<<(2*3));		// Pin 22
-	*(gpiomap+2) |=  (1<<(5*3));    	// Pin 25
-	*(gpiomap+2) |=  (1<<(7*3));		// Pin 27
-	__sync_synchronize();
-#elif defined(ODROID_N2)
-	// Set pins as outputs 
-	*(gpiomap+0x116) &= ~(1<<2);		// Pin X.2
-	*(gpiomap+0x116) &= ~(1<<3);		// Pin X.3
-	*(gpiomap+0x116) &= ~(1<<4);		// Pin X.4
-	*(gpiomap+0x116) &= ~(1<<7);		// Pin X.7
-
-	// Do something with mux (eh? whatever that means)
-	*(gpiomap+0x1B3) &=  (0xF<<2*4);	// Pin X.2
-	*(gpiomap+0x1B3) &=  (0xF<<3*4);	// Pin X.3
-	*(gpiomap+0x1B3) &=  (0xF<<4*4);	// Pin X.4
-	*(gpiomap+0x1B3) &=  (0xF<<7*4);	// Pin X.7
-	__sync_synchronize();
-#elif defined(ODROID_C1)
-	// Set pins as outputs
-	*(gpiomap+0x0F) &= ~(1<<8);		// Pin Y.8
-	*(gpiomap+0x0C) &= ~(1<<19);		// Pin X.19
-	*(gpiomap+0x0C) &= ~(1<<18);		// Pin X.18
-	*(gpiomap+0x0C) &= ~(1<<6);	        // Pin X.6
-	__sync_synchronize();
-#elif defined(ODROID_C2)
-	// Set pins as outputs
-	*(gpiomap+0x118) &= ~(1<<19);		// Pin X.19
-	*(gpiomap+0x118) &= ~(1<<11);		// Pin X.11
-	*(gpiomap+0x118) &= ~(1<<9);		// Pin X.9
-	// TODO: define and configure BLANK
-	__sync_synchronize();
-#elif defined(ODROID_M1)
-	// Set pins as outputs
-	rk_gpio(0, 0x02 + 0x01,  0, 1);		// Pin 0C.0
-	rk_gpio(0, 0x02 + 0x01,  1, 1);		// Pin 0C.1
-	rk_gpio(1, 0x02       , 10, 1);		// Pin 3B.2
-	rk_gpio(1, 0x02 + 0x01,  9, 1);		// Pin 3D.1
-#endif
-
-	// clear all LEDs
-	sendFrame16(0);
+	gpioInitImpl();     // platform-specific implementation
+	sendFrame16(0);     // clear all LEDs
 	commitFrame();
 }
 
@@ -544,25 +392,9 @@ void setLedState(bool state = true) {
 #endif
 	__sync_synchronize();
 	if (state) {
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-		*(gpiomap+10) = (1 << 25);	   // Set pin 25 (BLANK) low
-#elif defined(ODROID_N2)
-		*(gpiomap+0x117) &= ~(1 << 2);	   // Set pin X.2 (BLANK) low
-#elif defined(ODROID_C1)
-		*(gpiomap+0x0D) &= ~(1 << 6);      // Set pin X.6 (BLANK) low
-#elif defined(ODROID_M1)
-	rk_gpio(1, 0, 9, 0);		           // Set pin 3D.1 (BLANK) low
-#endif
+		gpioClear(PIN_BLANK);
         } else {
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-		*(gpiomap+7) = (1 << 25);	   // Set pin 25 (BLANK) high
-#elif defined(ODROID_N2)
-		*(gpiomap+0x117) |= (1 << 2);	   // Set pin X.2 (BLANK) high
-#elif defined(ODROID_C1)
-		*(gpiomap+0x0D)  |= (1 << 6);      // Set pin X.6 (BLANK) high
-#elif defined(ODROID_M1)
-		rk_gpio(1, 0, 9, 1);		   // Set pin 3D.1 (BLANK) high
-#endif
+		gpioSet(PIN_BLANK);
         }
 	__sync_synchronize();
 }
@@ -575,37 +407,7 @@ void gpioDeinit(bool noclear = false) {
 		sendFrame16(0);		// Turn all them LEDs off
 		commitFrame();
 	}
-	
-	// Set pins as inputs (default state)
-#if defined(RASPBERRY_PI3) || defined(RASPBERRY_PI4)
-	*(gpiomap+1) &= ~(7<<(7*3));	// Pin 17
-	*(gpiomap+2) &= ~(7<<(2*3));	// Pin 22
-	*(gpiomap+2) &= ~(7<<(5*3));	// Pin 25
-	*(gpiomap+2) &= ~(7<<(7*3));	// Pin 27
-#elif defined(ODROID_N2)
-	*(gpiomap+0x116) |= (1<<2);		// Pin X.2
-	*(gpiomap+0x116) |= (1<<3);		// Pin X.3
-	*(gpiomap+0x116) |= (1<<4);		// Pin X.4
-	*(gpiomap+0x116) |= (1<<7);		// Pin X.7
-#elif defined(ODROID_C1)
-	*(gpiomap+0x0F) |= (1<<(8));		// Pin Y.8
-	*(gpiomap+0x0C) |= (1<<(19));		// Pin X.19
-	*(gpiomap+0x0C) |= (1<<(18));		// Pin X.18
-	*(gpiomap+0x0C) |= (1<<(6));	        // Pin X.6
-#elif defined(ODROID_C2)
-	*(gpiomap+0x118) |= (1<<(19));		// Pin X.19
-	*(gpiomap+0x118) |= (1<<(11));		// Pin X.11
-	*(gpiomap+0x118) |= (1<<(9));		// Pin X.9
-        // TODO: deinit BLANK pin
-#elif defined(ODROID_M1)
-	rk_gpio(0, 0x02 + 0x01,  0, 0);		// Pin 0C.0
-	rk_gpio(0, 0x02 + 0x01,  1, 0);		// Pin 0C.1
-	rk_gpio(1, 0x02       , 10, 0);		// Pin 3B.2
-	rk_gpio(1, 0x02 + 0x01,  9, 0);		// Pin 3D.1
-#endif
-	__sync_synchronize();
-
-	//TODO: munmap the gpiomap.
+	gpioDeinitImpl();
 }
 
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
@@ -687,14 +489,12 @@ int main(int argc, char*argv[]) {
 			sendFrame16(-1);	// Dirty "all ones" hack
 			commitFrame();
                         setLedState(true);
-			gpioDeinit(1);
-			exit(0);
+			exit(0);                // test-mode, no gpioDeInit()
 		}
 		if (argument == "alloff") {
 			gpioInit();
                         setLedState(true);
-			gpioDeinit(1);
-			exit(0);
+			exit(0);                // test-mode, no gpioDeInit()
 		}
 	}
 
