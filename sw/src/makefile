@@ -6,7 +6,6 @@
 # License: GPL3
 # -------------------------------------------------------------------------
 
-PCB=LITE
 DEBUG=off
 GCCFLAGS_off=-w -O3
 GCCFLAGS_on=-Wall -Wextra -g -Og
@@ -26,7 +25,7 @@ platform.mak:
 	echo "PLATFORM=${PLATFORM}" > platform.mak
 
 ${EXECS}: ${SRC} gpio.h
-	${GCC} ${LIBS} ${GCCFLAGS} -D${PCB} -D${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
+	${GCC} ${LIBS} ${GCCFLAGS} -D${PLATFORM} -o ${EXECS} ${SRC} ${LDLIBS}
 
 gpio.h: gpio_${PLATFORM}.h
 	rm -f $@

@@ -387,9 +387,6 @@ void gpioInit() {
 //  -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
 
 void setLedState(bool state = true) {
-#if defined CLASSIC
-	return;
-#endif
 	__sync_synchronize();
 	if (state) {
 		gpioClear(PIN_BLANK);
