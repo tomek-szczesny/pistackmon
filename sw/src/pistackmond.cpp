@@ -14,11 +14,15 @@
 #include <signal.h>
 #include <sstream>
 #include <string>
+#include <cstring>
+#include <cstdio>
 #include <thread>
 #include <vector>
 
 #include <fcntl.h>	// open()
 #include <unistd.h>	// close()
+#include <sys/mman.h>   // mmap()
+#include <sys/stat.h>   // fchmod()
 #include <pthread.h>	// pthread_setschedparam()
 
 #include "gpio.h"       // this is a makefile-generated file (link)
@@ -99,7 +103,6 @@ const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_
 // It is not the proper way to linearize the LED response, but close enough
 const float led_gamma = 2.8;
 
-
 //================================== GLOBALS ===================================
 
 // Variables holding measurement results
@@ -126,6 +129,66 @@ std::vector<std::chrono::microseconds> pwm_periods;
 // Bools signaling the respective threads to stop
 bool pwm_closing = 0;
 bool main_closing = 0;
+
+//================================ shared-memory ===============================
+
+// Shared-memory region
+#define SHR_MEM_PATH "/pistackmond"
+void *shrmap;
+const off_t SHR_MEM_SIZE = sizeof(float);
+
+int openShrMem(int oflags) {
+	int rc;
+	int fd;
+
+	// get shared memory file descriptor
+	fd = shm_open(SHR_MEM_PATH,oflags,S_IRUSR|S_IWUSR);
+	if (fd == -1) {
+		perror("shm_open failed");
+		return -1;
+	}
+	// works only after shm_open, since shm_open respects umask
+	fchmod(fd,S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+
+	// increase the size if in create-mode
+	if (oflags & O_CREAT) {
+		rc = ftruncate(fd,SHR_MEM_SIZE);
+		if (rc == -1) {
+			perror("ftruncate failed");
+			shm_unlink(SHR_MEM_PATH);
+			return -1;
+		}
+	}
+
+	// map shared memory
+	if (oflags & O_RDWR) {
+		shrmap = mmap(NULL,SHR_MEM_SIZE,PROT_WRITE,MAP_SHARED,fd,0);
+	} else {
+		shrmap = mmap(NULL,SHR_MEM_SIZE,PROT_READ,MAP_SHARED,fd,0);
+	}
+	close(fd);
+	return 0;
+}
+
+// read float from shared memory
+inline float readShrMem() {
+	float value;
+	memcpy(&value,shrmap,sizeof(float));
+	return value;
+}
+
+// this writes a string (cmdline-arg) as float
+inline void writeShrMem(std::string str) {
+	float value = std::stof(str);
+	memcpy(shrmap,&value,sizeof(float));
+}
+
+void closeShrMem(bool unlink=false) {
+	munmap(shrmap,SHR_MEM_SIZE);
+	if (unlink) {
+		shm_unlink(SHR_MEM_PATH);
+	}
+}
 
 //=================================== MISC =====================================
 
@@ -278,8 +341,8 @@ float fetchRam() {
 }
 
 inline float fetchUser() {
-	// currently we return a const-value
-	return 1.0;
+	// read user-value from shared-memory
+	return readShrMem();
 }
 
 // ================================ LED DRIVING ================================
@@ -488,11 +551,24 @@ int main(int argc, char*argv[]) {
                         setLedState(true);
 			exit(0);                // test-mode, no gpioDeInit()
 		}
-		if (argument == "alloff") {
+		else if (argument == "alloff") {
 			gpioInit();
                         setLedState(true);
 			exit(0);                // test-mode, no gpioDeInit()
 		}
+		else {  // expecting a float 0<=x<=1
+			if (openShrMem(O_RDWR)) {
+				exit(3);
+			}
+			writeShrMem(argument);
+			closeShrMem();
+			exit(0);
+		}
+	}
+
+	// create shared memory for user-led
+	if (openShrMem(O_RDWR|O_CREAT|O_EXCL)) {
+		exit(3);
 	}
 
 	// An exact time to gather measurement data and update pwm values
@@ -552,6 +628,7 @@ int main(int argc, char*argv[]) {
 
 	pwm_closing = 1;
 	pwm_thread.join();
+	closeShrMem(true);
 	exit(0);
 }
 
