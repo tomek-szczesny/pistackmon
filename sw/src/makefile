@@ -17,7 +17,7 @@ EXECS=pistackmond
 GCC?=g++
 SRC=pistackmond.cpp gpio_${PLATFORM}.cpp
 LIBS=-pthread
-LDLIBS=
+LDLIBS=-lrt
 
 include platform.mak
 
