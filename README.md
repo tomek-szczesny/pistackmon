@@ -20,6 +20,8 @@ PiStackMon comes in two varieties, *lite* and *classic*.
 
 ### PiStackMon Lite
 
+![](pistackmon-lite.jpg)
+
 By popular demand, a new hardware version has been rolled out, offering the most useful subset of features seen in the Classic design. All mandatory SMD components are placed on top side, so the board may be ordered preassembled by JLCPCB. All required files are available in this repository.
 
 The user is required to solder their own 40-pin socket, power switch pin header and power socket of their choice.
@@ -55,6 +57,8 @@ Features include:
 
 
 ### PiStackMon Classic
+
+![](pistackmon-classic.jpg)
 
 The omnipotent, original design with all features available in the project. It is targeted at more advanced users, as no kits or preassembled units are available.
 
