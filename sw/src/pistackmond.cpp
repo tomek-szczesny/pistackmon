@@ -77,10 +77,10 @@ const int ref_div = 5;
 // Smaller values are possible at the expense of CPU load and accuracy.
 // Values under 10us are not recommended due to thread sleep accuracy.
 // For mathematical consistency it should be an integer, but you do you.
-const float pwm_lsb_period = 250;			// [us]
+const float pwm_lsb_period = 50;			// [us]
 
 // bit depth of PWM LED driver (2-16)
-const int pwm_res = 6;
+const int pwm_res = 8;
 
 // Layout vectors, containing positions of each LED in LED driver register
 const std::vector<int> cpu_layout = {4, 3, 2, 1, 0};
@@ -91,17 +91,18 @@ const std::vector<int> user_layout = {15};
 // Led intensities adjusted by color 
 // Depending on LED make and model, some colors might appear brighter than others
 // Consts below may be used to equalize these differences
-const float led_g = 1;
+const float led_g = 0.35;
 const float led_y = 1;
 const float led_r = 1;
 const float led_b = 1;
 const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
-					led_r, led_y, led_g, led_g, led_g,
-					led_g, led_g, led_y, led_r, led_r,led_b};
+						led_r, led_y, led_g, led_g, led_g,
+						led_g, led_g, led_y, led_r, led_r, led_b};
 
-// Gamma correction for LEDs
-// It is not the proper way to linearize the LED response, but close enough
-const float led_gamma = 2.8;
+// "Gamma" correction for LEDs
+// This constant is in use by the led_linear() function below.
+// This is not the actual "gamma" correction, but something similar.
+const float led_gamma = 3.75;
 
 //================================== GLOBALS ===================================
 
@@ -129,6 +130,19 @@ std::vector<std::chrono::microseconds> pwm_periods;
 // Bools signaling the respective threads to stop
 bool pwm_closing = 0;
 bool main_closing = 0;
+
+
+//============================== LED LINEARIZATION =============================
+
+float led_linear(float in) {
+	// A LED linearization algorithm that takes a brightness value (0-1)
+	// and returns duty cycle (also 0-1).
+	// Uses constant "gamma" declared above
+
+	float a = 1 / (std::exp(led_gamma) - 1);
+	return a * (std::exp(led_gamma*in) - 1);
+}
+
 
 //================================ shared-memory ===============================
 
@@ -357,7 +371,7 @@ std::vector<float> led_pwms() {
 	for (int i=0; i<5; i++) {
 		if (cpu.f() >= 20*(i+1)) output[cpu_layout[i]] = 1;
 		else {
-			output[cpu_layout[i]] = std::pow((cpu.f() - (20*i))/20, led_gamma);
+			output[cpu_layout[i]] = led_linear((cpu.f() - (20*i))/20);
 			break;
 		}
 	}
@@ -365,7 +379,7 @@ std::vector<float> led_pwms() {
 	for (int i=0; i<5; i++) {
 		if (ram.f() >= 20*(i+1)) output[ram_layout[i]] = 1;
 		else {
-			output[ram_layout[i]] = std::pow((ram.f() - (20*i))/20, led_gamma);
+			output[ram_layout[i]] = led_linear((ram.f() - (20*i))/20);
 			break;
 		}
 	}
@@ -373,13 +387,13 @@ std::vector<float> led_pwms() {
 		for (int i=0; i<5; i++) {
 			if (temp.f() >= 10*(i+1)+40) output[temp_layout[i]] = 1;
 			else {
-				output[temp_layout[i]] = std::pow((temp.f() - (10*i+40))/10, led_gamma);
+				output[temp_layout[i]] = led_linear((temp.f() - (10*i+40))/10);
 				break;
 			}
 		}
 	}
 
-	output[user_layout[0]] = std::pow(user,led_gamma);
+	output[user_layout[0]] = led_linear(user);
 	for (int i=0; i<16; i++) output[i] *= led_pwm_multipliers[i];
 
 	return output;
@@ -595,7 +609,6 @@ int main(int argc, char*argv[]) {
 	while (!main_closing) {
 
 		if (++divCounter >= ref_div) {
-			userCache = fetchUser();
 			cpuCache = fetchCpu();
 			ramCache = fetchRam();
                         if (tempCache >= 0.0) {
@@ -604,6 +617,8 @@ int main(int argc, char*argv[]) {
                         }
 			divCounter = 0;
 		}	
+		// Refresh user LED on every cycle, for faster response
+		userCache = fetchUser();
 
 		user = userCache;
 		cpu = cpuCache;

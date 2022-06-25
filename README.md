@@ -6,7 +6,7 @@ PiStackMon started off as a hardware module for distributing power to multiple s
 
 Over time, with its feature list open for new ideas, it grew into a highly integrated, multi purpose board with extended connectivity options.
 
-The most eye catching feature is the live system monitor, with three most basic parameters (Temperature, RAM and CPU) clearly presented on a LED matrix. This helps quickly diagnosing performance bottlenecks by just looking at your cluster. LEDs are driven by ultra lightweight daemon, *pistackmond*, that compiles and runs on any target architecture. To put that into perspective, it costs less resources to run than htop.
+The most eye catching feature is the live system monitor, with three most basic parameters (Temperature, RAM and CPU) clearly presented on a LED matrix. This helps quickly diagnosing performance bottlenecks by just looking at your cluster. LEDs are driven by a lightweight daemon, *pistackmond*, that compiles and runs on any target architecture.
 
 PiStackMon comes with a variety of extra connectivity features, such as optically isolated outputs, isolated high current switches (up to 6A), dedicated fan output with suitable transistor, not to mention the usual I2C, UART or SPI.
 
