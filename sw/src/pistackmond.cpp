@@ -148,13 +148,18 @@ float led_linear(float in) {
 
 // Shared-memory region
 #define SHR_MEM_PATH "/pistackmond"
-void *shrmap;
+void *shrmap = NULL;
 const off_t SHR_MEM_SIZE = sizeof(float);
+bool shrMustDelete = false;
 
 int openShrMem(int oflags) {
 	int rc;
 	int fd;
 
+	// set delete-flag (too early, since we did not create it yet, but safer)
+	if (oflags & O_CREAT) {
+		shrMustDelete = true;
+	}
 	// get shared memory file descriptor
 	fd = shm_open(SHR_MEM_PATH,oflags,S_IRUSR|S_IWUSR);
 	if (fd == -1) {
@@ -187,7 +192,9 @@ int openShrMem(int oflags) {
 // read float from shared memory
 inline float readShrMem() {
 	float value;
-	memcpy(&value,shrmap,sizeof(float));
+	if (shrmap) {
+		memcpy(&value,shrmap,sizeof(float));
+	}
 	return value;
 }
 
@@ -197,9 +204,12 @@ inline void writeShrMem(std::string str) {
 	memcpy(shrmap,&value,sizeof(float));
 }
 
-void closeShrMem(bool unlink=false) {
-	munmap(shrmap,SHR_MEM_SIZE);
-	if (unlink) {
+void closeShrMem() {
+	if (shrmap) {
+		munmap(shrmap,SHR_MEM_SIZE);
+		shrmap = NULL;
+	}
+	if (shrMustDelete) {
 		shm_unlink(SHR_MEM_PATH);
 	}
 }
@@ -545,6 +555,7 @@ void signal_handle(const int s) {
 	// Handles a few POSIX signals, asking the process to die gracefully
 	
 	main_closing = 1;
+	closeShrMem();
 
 	if (s){};	// Suppress warning about unused, mandatory parameter
 }
@@ -643,7 +654,7 @@ int main(int argc, char*argv[]) {
 
 	pwm_closing = 1;
 	pwm_thread.join();
-	closeShrMem(true);
+	closeShrMem();
 	exit(0);
 }
 
