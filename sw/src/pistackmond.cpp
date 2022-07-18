@@ -12,6 +12,7 @@
 #include <fstream>
 #include <mutex>
 #include <signal.h>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <cstring>
@@ -20,7 +21,7 @@
 #include <vector>
 
 #include <fcntl.h>	// open()
-#include <unistd.h>	// close()
+#include <unistd.h>	// close(), getopt()
 #include <sys/mman.h>   // mmap()
 #include <sys/stat.h>   // fchmod()
 #include <pthread.h>	// pthread_setschedparam()
@@ -201,6 +202,57 @@ void closeShrMem(bool unlink=false) {
 	munmap(shrmap,SHR_MEM_SIZE);
 	if (unlink) {
 		shm_unlink(SHR_MEM_PATH);
+	}
+}
+
+//================================ getopt ======================================
+
+std::string arg_cmd = "";
+std::string arg_user = "";
+std::string arg_brightness = "";
+bool arg_service = false;
+
+void help(char* pgm) {
+	std::cerr << "usage: " << pgm << 
+	  " -s [-b brightness ] | [-u led_user] | allon | alloff" << std::endl;
+	exit(3);
+}
+
+void parseArgs(int argc, char*argv[]) {
+	int c;
+	opterr = 0;
+
+	while ((c = getopt (argc,argv,"sb:u:h")) != -1) {
+		switch (c) {
+			case 's':
+			arg_service = true;
+			break;
+		case 'b':
+			arg_brightness = std::string(optarg);
+			break;
+		case 'u':
+			arg_user = std::string(optarg);
+			break;
+		case 'h':
+	  		help(argv[0]);
+	  		break;
+		case '?':
+			if (optopt == 'b' || optopt == 'u') {
+				std::cerr << "error: option -" << optopt << 
+				  " requires an argument" << std::endl;
+				help(argv[0]);
+			} else {
+				std::cerr << "error: unknown option -" << 
+				  optopt << std::endl;
+				help(argv[0]);
+				break;
+			}
+		default:
+			help(argv[0]);
+		}
+	}
+	if (optind < argc) {
+		arg_cmd = argv[optind];
 	}
 }
 
@@ -555,29 +607,34 @@ int main(int argc, char*argv[]) {
 
 	signal (SIGINT, signal_handle);		// Catches SIGINT (ctrl+c)
 	signal (SIGTERM, signal_handle);	// Catches SIGTERM
-	
-	if (argc==2) {		// If there's exactly one argument
-		std::string argument = argv[1];
-		if (argument == "allon") {
-			gpioInit();
-			sendFrame16(-1);	// Dirty "all ones" hack
-			commitFrame();
-                        setLedState(true);
-			exit(0);                // test-mode, no gpioDeInit()
+
+        parseArgs(argc,argv);
+	if (arg_cmd == "allon") {
+		gpioInit();
+		sendFrame16(-1);	// Dirty "all ones" hack
+		commitFrame();
+                       setLedState(true);
+		exit(0);                // test-mode, no gpioDeInit()
+	}
+	else if (arg_cmd == "alloff") {
+		gpioInit();
+		setLedState(true);
+		exit(0);                // test-mode, no gpioDeInit()
+	}
+	else if (arg_user != "") {            // expecting a float 0<=x<=1
+		if (openShrMem(O_RDWR)) {
+			exit(3);
 		}
-		else if (argument == "alloff") {
-			gpioInit();
-                        setLedState(true);
-			exit(0);                // test-mode, no gpioDeInit()
-		}
-		else {  // expecting a float 0<=x<=1
-			if (openShrMem(O_RDWR)) {
-				exit(3);
-			}
-			writeShrMem(argument);
-			closeShrMem();
-			exit(0);
-		}
+		writeShrMem(arg_user);
+		closeShrMem();
+		exit(0);
+	}
+	else if (!arg_service) {  // require explicit -s flag for service
+		std::cerr << "error: illegal invocation" << std::endl;
+		help(argv[0]);
+	}
+	if (arg_brightness != "") {      // expecting a float 0<=x<=1
+		exit(0);
 	}
 
 	// create shared memory for user-led
