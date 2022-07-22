@@ -155,6 +155,11 @@ The recommended way to set up *pistackmond* on a target machine is to build it f
   - `sudo make install`
 
 
+Note that you can change the default-brightness of LED-colors using the make
+command, e.g. the following command changes the default 0.35 to 0.25.
+
+    make rpi4 LED_G=0.25
+
 
 That's it! PiStackMon should start displaying your computer stats immediately.
 
