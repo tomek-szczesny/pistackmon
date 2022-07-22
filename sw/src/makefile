@@ -42,7 +42,7 @@ clean:
 	rm -f ${EXECS} gpio.h platform.mak
 
 install: ${EXECS}
-	install -p -s ${EXECS} ${PREFIX}/sbin
+	install -p -s ${EXECS} ${PREFIX}/bin
 
 uninstall:
-	rm -f ${PREFIX}/sbin/${EXECS}
+	rm -f ${PREFIX}/bin/${EXECS}
