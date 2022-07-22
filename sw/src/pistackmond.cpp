@@ -97,7 +97,8 @@ const float led_g = LED_G;
 const float led_y = LED_Y;
 const float led_r = LED_R;
 const float led_b = LED_B;
-const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
+
+std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
 						led_r, led_y, led_g, led_g, led_g,
 						led_g, led_g, led_y, led_r, led_r, led_b};
 
@@ -635,7 +636,11 @@ int main(int argc, char*argv[]) {
 		help(argv[0]);
 	}
 	if (arg_brightness != "") {      // expecting a float 0<=x<=1
-		exit(0);
+		float value = std::stof(arg_brightness);
+		for (int i=0; i<16; i++) {
+			led_pwm_multipliers[i] =
+				std::min(1.0f,led_pwm_multipliers[i]*value);
+		}
 	}
 
 	// create shared memory for user-led
