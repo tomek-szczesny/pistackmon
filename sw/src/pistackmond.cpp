@@ -92,10 +92,11 @@ const std::vector<int> user_layout = {15};
 // Led intensities adjusted by color 
 // Depending on LED make and model, some colors might appear brighter than others
 // Consts below may be used to equalize these differences
-const float led_g = 0.35;
-const float led_y = 1;
-const float led_r = 1;
-const float led_b = 1;
+// Note: these values are set from the makefile
+const float led_g = LED_G;
+const float led_y = LED_Y;
+const float led_r = LED_R;
+const float led_b = LED_B;
 const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_g,
 						led_r, led_y, led_g, led_g, led_g,
 						led_g, led_g, led_y, led_r, led_r, led_b};
@@ -103,7 +104,7 @@ const std::vector<float> led_pwm_multipliers = {led_y, led_g, led_g, led_g, led_
 // "Gamma" correction for LEDs
 // This constant is in use by the led_linear() function below.
 // This is not the actual "gamma" correction, but something similar.
-const float led_gamma = 3.75;
+const float led_gamma = LED_GAMMA;
 
 //================================== GLOBALS ===================================
 
