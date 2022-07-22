@@ -3,8 +3,8 @@ Description=PiStackMon Daemon
 
 [Service]
 User=root
-
-ExecStart=PREFIX/bin/pistackmond -s
+EnvironmentFile=/etc/default/pistackmond
+ExecStart=PREFIX/bin/pistackmond -s -b ${BRIGHTNESS}
 
 [Install]
 WantedBy=local-fs.target

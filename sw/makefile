@@ -56,6 +56,7 @@ ${SERVICE}: ${SERVICE}.in
 install: ${SERVICE}
 	${MAKE} -C src install
 	install -p -m 0664  ${SERVICE} ${SERVICEPATH}
+	echo -e "#default brightness-factor\nBRIGHTNESS=1.0" > /etc/default/pistackmond
 	systemctl daemon-reload
 	-systemctl enable pistackmond
 	-systemctl start pistackmond
