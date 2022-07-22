@@ -160,6 +160,25 @@ command, e.g. the following command changes the default 0.35 to 0.25.
 
     make rpi4 LED_G=0.25
 
+The executable `pistackmond` supports various commandline arguments, see
+
+    pistackmond -h
+
+for a short help. Typically it is used to control the user-led (light version
+only):
+
+
+    pistackmond -u 1
+    pistackmond -u 0
+    pistackmond -u 0.4
+
+The first command turns the blue user-led on, the second off and the third
+turns it on with reduced brightness.
+
+The `-b` option is used as a scaling factor for the overall brightness and
+is only valid during service-startup. To set the factor for the service,
+edit `/etc/default/pistackmond`.
+
 
 That's it! PiStackMon should start displaying your computer stats immediately.
 
