@@ -45,4 +45,4 @@ install: ${EXECS}
 	install -p -s ${EXECS} ${PREFIX}/bin
 
 uninstall:
-	rm -f ${PREFIX}/bin/${EXECS}
+	rm -f ${PREFIX}/bin/${EXECS} ${PREFIX}/sbin/${EXECS}
