@@ -197,6 +197,8 @@ inline float readShrMem() {
 // this writes a string (cmdline-arg) as float
 inline void writeShrMem(std::string str) {
 	float value = std::stof(str);
+	if (value > 1) value = 1;
+	if (value < 0) value = 0;
 	memcpy(shrmap,&value,sizeof(float));
 }
 
@@ -215,8 +217,9 @@ std::string arg_brightness = "";
 bool arg_service = false;
 
 void help(char* pgm) {
-	std::cerr << "usage: " << pgm << 
-	  " -s [-b brightness ] | [-u led_user] | allon | alloff" << std::endl;
+	std::cerr << "usage: " << pgm << " -u USER_LED" << std::endl <<
+	  "where USER_LED is the brightness of a blue user LED on PiStackMon Lite (range: 0-1)" << std::endl <<
+	  "For more advanced options see README.md" << std::endl;
 	exit(3);
 }
 
