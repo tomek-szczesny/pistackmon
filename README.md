@@ -218,7 +218,7 @@ PiStackMon is electrically compatible with all SBCs that follow the RasPi 40-pin
 | -------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Raspberry Pi 3 | Compatible |                                                                                                                                            |
 | Raspberry Pi 4 | Compatible |                                                                                                                                            |
-| Odroid N2(+)   | Compatible | Powering via PiStackMon is not supported. Any attempt will likely destroy your N2.                                                         |
+| Odroid N2(+)(L)| Compatible | Powering via PiStackMon is not supported. Any attempt will likely destroy your N2.                                                         |
 | Odroid C1(+)   | Compatible | Temperature sensing not confirmed. OS must export CPU temperature to the following file: `/sys/devices/virtual/thermal/thermal_zone0/temp` |
 | Odroid C2      | Compatible | Powering via PiStackMon may be possible - not tested, proceed with caution.                                                                |
 | Odroid M1      | Compatible | Powering via PiStackMon is not supported. Any attempt will likely destroy your M1.                                                         |

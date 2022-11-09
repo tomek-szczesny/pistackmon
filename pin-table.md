@@ -5,7 +5,7 @@ This table just documents the pins for the various supported boards.
 Numbers in parenthesis are libgpiod-line numbers.
 
 
-Pin   |Physical | Pi3/Pi4 |  N2       |   C1(+)       |  C2  |  M1 (numbers to be verified) |
+Pin   |Physical | Pi3/Pi4 |  N2(+)(L) |   C1(+)       |  C2  |  M1 (numbers to be verified) |
 ------|---------|---------|-----------|---------------|------|------------------------------|
 DATA  |      11 |      17 |  X.3 (69) |  88  Y.8 (23) | X.19 | 0C.0 (16)                    |
 CLK   |      13 |      27 |  X.4 (70) | 116 X.19 (15) | X.11 | 0C.1 (17)                    |

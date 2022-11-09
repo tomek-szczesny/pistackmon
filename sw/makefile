@@ -23,7 +23,7 @@ none:
 	@echo "make c1             - builds a Odroid C1(+) version of pistackmond"
 	@echo "make c2             - builds a Odroid C2 version of pistackmond"
 	@echo "make m1             - builds a Odroid M1 version of pistackmond"
-	@echo "make n2             - builds a Odroid N2 version of pistackmond"
+	@echo "make n2             - builds a Odroid N2(+)(L) version of pistackmond"
 	@echo "make clean          - cleans build environment"
 	@echo "sudo make install   - installs pistackmond (you need to build it first!)"
 	@echo "sudo make uninstall - removes pistackmond"
