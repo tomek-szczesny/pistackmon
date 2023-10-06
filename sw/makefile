@@ -20,6 +20,7 @@ none:
 	@echo "Pick one of the options:"
 	@echo "make rpi3           - builds a Raspberry Pi 3 version of pistackmond"
 	@echo "make rpi4           - builds a Raspberry Pi 4 version of pistackmond"
+	@echo "make rpi5           - builds a Raspberry Pi 5 version of pistackmond"
 	@echo "make c1             - builds a Odroid C1(+) version of pistackmond"
 	@echo "make c2             - builds a Odroid C2 version of pistackmond"
 	@echo "make m1             - builds a Odroid M1 version of pistackmond"
@@ -33,6 +34,9 @@ rpi3:
 
 rpi4:
 	${MAKE} -C src $(EXECS) PLATFORM=PI4
+
+rpi5:
+	${MAKE} -C src $(EXECS) PLATFORM=PI5
 
 n2:
 	${MAKE} -C src $(EXECS) PLATFORM=N2
